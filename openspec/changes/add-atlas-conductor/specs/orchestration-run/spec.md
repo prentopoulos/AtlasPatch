@@ -23,7 +23,7 @@ On completion the orchestrator SHALL emit a terminal summary report that states,
 - **THEN** the report lists each slide with its outcome and reason and shows counts that sum to the cohort size
 
 ### Requirement: Report surfaces the decision trace, not only outcomes
-The report SHALL surface, per slide, the ordered decisions that produced the outcome — state reconciliation, dispatch, validation with reason code, and any recovery action — and not only the final verdict and cohort counts. The trace SHALL be sourced from the append-only audit trail and SHALL contain operational metadata only (no pixels, no PHI). The report SHALL be summary-first, exposing per-slide decision detail on demand (including under `--dry-run`), so a large cohort does not force full-trace output.
+The report SHALL surface, per slide, the ordered decisions that produced the outcome — state reconciliation, dispatch, validation with reason code, and any recovery action — and not only the final verdict and cohort counts. The trace SHALL be sourced from the append-only telemetry records (`agent_events`, `slide_stage_outcomes`) and SHALL contain operational metadata only (no pixels, no PHI). The report SHALL be summary-first, exposing per-slide decision detail on demand (including under `--dry-run`), so a large cohort does not force full-trace output.
 
 #### Scenario: Recovered slide shows its decision path
 - **WHEN** a slide is dispatched, fails validation on a NaN, is recovered by a bounded retry, and then validates
@@ -46,3 +46,14 @@ The orchestrator SHALL restrict all validation to structural correctness of Atla
 #### Scenario: No clinical judgement
 - **WHEN** an HDF5 output is validated
 - **THEN** the verdict concerns only structural properties (file opens, datasets present, row alignment, absence of NaNs) and never the biological or diagnostic content of the slide
+
+### Requirement: Deterministic core, no clinical reasoning
+The orchestrator SHALL make only operational decisions (which CLI command to run, whether an HDF5 output is structurally valid, whether and how to retry) and SHALL NOT perform, embed, or delegate any clinical or diagnostic interpretation of slide content. No vision-language model or other probabilistic reasoner SHALL be placed on the plan/dispatch/validate/recover path. This keeps the layer out of Software-as-a-Medical-Device scope and preserves the structural-not-clinical invariant by construction. (The by-construction governance guardrails that build on this invariant — PHI-free write-gate, HITL, egress assertion, audit trail, Model Card — are phase 2, `add-conductor-governance`.)
+
+#### Scenario: No diagnostic verdict is ever produced
+- **WHEN** the orchestrator completes a run and emits its summary
+- **THEN** the summary reports per-slide operational outcomes (present/valid/missing/invalid/blocked) and never a clinical finding, diagnosis, or interpretation of tissue
+
+#### Scenario: The decision path contains no model inference
+- **WHEN** any planning, dispatch, validation, or recovery decision is taken
+- **THEN** the decision is a deterministic function of filesystem state, exit codes, and typed outcomes, with no model inference call on the path

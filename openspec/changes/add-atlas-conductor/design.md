@@ -64,6 +64,7 @@ Allowed actions: `retry_as_is`, `retry_with_mutation` (monotone ladder over `--f
 ### D8 — Four A2A agents; scheduler is an in-process loop
 Planner, worker, validator, recovery are A2A peers (Google ADK + A2A). The scheduler is a deterministic in-orchestrator resource governor, not a fifth agent.
 - **Why:** Matches the decided MVP; the scheduler has no agentic payoff and adding it as an agent only enlarges the protocol surface and muddies review.
+- **Justification for the protocol (added):** the deterministic core (D11) does not *need* A2A for correctness — the four components would produce identical outputs as plain in-process calls. The protocol earns its weight as an **observability/demonstration** payoff: the real inter-agent messages are exactly what the GUI's live message-flow view (Level 2, D18) renders. Delivery therefore builds the core as plain typed components first (Runs A1–A3) and wires A2A last (Run C), so the protocol is adopted for a named reason — watchable choreography — rather than by default. See D17 for the delivery slicing.
 
 ### D9 — Append-only, typed telemetry sink; metadata-only enforced by types
 One sink interface with local (jsonl/sqlite) and BigQuery backends, over ~4 typed record families: `jobs`, `slide_stage_outcomes`, `validation_results`, `agent_events`. No record type has an array/image field.
@@ -102,8 +103,43 @@ Before dispatch, the planner rejects inadmissible cohorts/inputs — empty cohor
 - **Boundary — shallow by construction:** admissibility is a cheap check (extension allowlist + existence + non-zero size + optional magic bytes), *not* a slide decode. Deep WSI validation would need a slide-reader dependency and start reimplementing pipeline responsibilities, brushing the "don't reach into `atlas_patch`" invariant. Deep validation stays AtlasPatch's job; the gate only rejects obvious garbage.
 - **Provenance:** the out-of-distribution-rejection lesson is adapted (idea only) from the MedVision-AI failure mode (a non-chest image classified "pneumonia, 87.3%") — the operational analogue is refusing to confidently process input the pipeline cannot consume.
 
-## Scope note — baked in now vs. deferred
-Baked into this change (load-bearing, painful to retrofit): D11–D14, the PHI-free telemetry gate, the HITL gate, the egress assertion, and the audited trail. Deferred to a clean follow-on change (additive layers, no rework): a DVC/Git data-lineage pipeline, a *learned* recovery classifier trained on the telemetry dataset, and a full EU AI Act / ISO 42001 compliance dossier.
+### D17 — Deliver in vertical slices, not one 44-task change
+The work ships as a sequence of runs — **A1 → A2 → A3 → GUI → B → C** — where each run is a *vertical slice* that goes config → plan → dispatch → validate → report **end-to-end, green in CI against the fake adapter**, and each successive run adds one increment of *decision sophistication*.
+- **A1 — walking skeleton (happy path):** minimal contracts, the validity predicate, a valid-output-only fake adapter, a trivial skip-vs-run planner, first-pass scheduler, typed local telemetry, terminal report. Demonstrates "point at a cohort, watch it plan/run/report."
+- **A2 — reconciliation intelligence:** branch-on-requested-output, skip-if-valid on partial cohorts, geometry-conflict block, input-admissibility gate (D16), `--dry-run`, full validator reason codes, the decision-trace render (D15), the real subprocess adapter (kept out of the CI happy path). Demonstrates the "decisions are the contribution" thesis.
+- **A3 — recovery:** fake-adapter failure injection, two-source classification, the bounded monotone action ladder, `unknown → block`, dependency-blocking, per-file recovery retries. Completes the loop.
+- **GUI — read-only observability** (D18), attachable right after A1 and grown across A2/A3.
+- **B — governance:** HITL gate, PHI-free write gate, tamper-evident audit trail, egress assertion, Model Card, and the CI proofs.
+- **C — distribution:** A2A/ADK agent wiring, BigQuery backend.
+- **Why:** 44 tasks landing (or failing) as one unit is not a tractable implement/review unit; vertical slices are each independently demonstrable and green, and A1 is the fastest path to "in motion." Splitting by *workstream* (a "validator run," a "planner run") was rejected — those runs don't execute on their own.
+- **End result is unchanged:** the union A1 ∪ A2 ∪ A3 ∪ B ∪ C equals the original scope; slicing changes delivery order, review size, and when CI goes green — not the final feature set or any of D1–D16. The GUI is the one net addition, and it was requested independently of the split.
+- **Load-bearing caveat:** the **validity predicate** (task 3.1) and the **typed telemetry record shapes** (task 7.1) must be correct in A1, because every later run — planner decisions, the decision trace, the GUI, the PHI gate — renders or gates off them. Get the *record types* right early so B's PHI gate is a write-time filter in front of an already-metadata-only sink (additive), not a retrofit.
+
+### D18 — Read-only observability GUI, re-skinned from a diagnostic template, with live agent choreography
+A Streamlit GUI is added as an **additive renderer** over the PHI-free telemetry sink + the recorded decision events — another renderer alongside the terminal report / `--dry-run` trace (D15). It imports nothing from `atlas_patch`, reads only those records, and **tails** the append-only sink rather than hooking the orchestrator process, so it corrupts no invariant. **Read-only for the MVP** (observe runs, verdicts, decision traces, metrics, history); it is *not* a control surface — HITL confirmation (D13) and job submission are later work.
+- **Re-skin, not clone.** The *ergonomics* are adapted clean-room (idea only — no code, weights, or data) from MedVision-AI's Streamlit dashboard — the same project D16 cites as a cautionary failure — but every panel **inverts from clinical to operational**:
+
+  | MedVision-AI (diagnostic) | atlas_conductor GUI (operational) |
+  |---|---|
+  | Upload X-ray image | Point at / submit a YAML job config — never upload the WSI |
+  | "Pneumonia 87.3%" prediction + confidence | Per-slide **verdict** + reason code (valid / missing / corrupt / geometry-mismatch / blocked) — **no probability** |
+  | Grad-CAM heatmap over pixels | The **D15 chain-of-decisions trace** — the decision trace *is* the Grad-CAM analogue |
+  | Threshold slider | Recovery-ladder / tuning config (and later the HITL confirm) |
+  | ROC-AUC / metrics | Operational run metrics — recovery hit-rate is the honest ROC-AUC analogue (D14) |
+  | Download research report | HTML/JSON sibling of the terminal report |
+  | Session history | Job / run history from the telemetry sink |
+  | *Displays the X-ray* | **Dropped entirely — no slide pixels, ever** |
+
+- **Three hard guardrails** (the places a well-meaning GUI silently becomes a medical device): (1) **never render slide pixels** — no-pixel egress (D11/D15); (2) **verdict, not prediction** — deterministic reason codes, no confidence score anywhere; (3) **"metrics" = operational metrics only**, never a clinical-accuracy claim.
+- **Live agent choreography** — a real-time view of which agents are engaged, in two fidelity levels:
+  - **Level 1 — component-state panel:** agents rendered lit (active) / dim (idle) with a "now processing slide X · stage Y" ticker, driven by tailing the `agent_events` record family (task 7.1). Works **from A1** with plain-class components; needs no A2A.
+  - **Level 2 — true A2A message-flow:** peer messages / handoffs pulse as edges between agent nodes. Needs Run C's A2A wiring, and is the **named justification** for adopting the protocol (see D8).
+  - All `agent_events` are operational metadata (agent id, stage, pseudonymized stem, timestamps, reason code) — PHI-free, under the same guardrails above.
+- **Sequencing:** GUI + Level 1 attach after A1 (fastest "in motion" demo); Level 2 lands with Run C.
+- **Provenance:** presentation ergonomics adapted clean-room from MedVision-AI (idea only); all semantics operational, preserving D11.
+
+## Scope note — delivery ordering (supersedes "baked in now")
+Ordering is per **D17**: the deterministic core lands first (A1–A3), the observability GUI attaches after A1, governance hardening follows in Run B, distribution (A2A + BigQuery) in Run C. What is **load-bearing in A1 and cannot be deferred**: the validity predicate (3.1) and the typed telemetry record shapes (7.1) — everything downstream renders or gates off them. What is **honored throughout by construction, not as a task**: D11 (deterministic operational core). What **lands as its own run but is still in-scope**: D12 PHI-free gate and the egress/audit hardening (Run B), D13 HITL (Run B), the D14 labeled-outcome fields (A3 onward). **Deferred to clean follow-on changes** (additive, no rework): a DVC/Git data-lineage pipeline, a *learned* recovery classifier trained on the telemetry dataset, and a full EU AI Act / ISO 42001 compliance dossier.
 
 ## Risks / Trade-offs
 
@@ -121,7 +157,7 @@ Additive only; no migration of existing data or behavior. Rollout: land the pack
 
 ## Open Questions
 
-- BigQuery record families: keep the 4 proposed, or split `agent_events` into `agent_messages` vs `agent_decisions`?
-- Should the terminal report have a machine-readable sibling (JSON) in MVP, or is human-readable enough? (The D15 decision trace serializes from the same audit-trail records, so a JSON sibling is the same data in another shape — leaning yes.)
+- BigQuery record families: keep the 4 proposed, or split `agent_events` into `agent_messages` vs `agent_decisions`? (The Level 2 message-flow view in D18 leans toward a clean `agent_messages` vs `agent_decisions` split, since the choreography visual renders *messages* while the decision trace renders *decisions* — revisit when Run C wires A2A.)
+- ~~Should the terminal report have a machine-readable sibling (JSON)?~~ **Resolved (D18):** yes — an HTML/JSON sibling of the report is a GUI-run task; it is the same audit/telemetry data in another shape.
 - Idempotency key composition — `(job_id, slide_stem, stage, geometry, encoder)` — is that sufficient to make resume safe across config edits?
-- Do we expose a `--dry-run` that prints the reconciled plan (planner only, no dispatch) in MVP? (Leaning yes — it's cheap and demonstrates the decision surface.)
+- ~~Do we expose a `--dry-run`?~~ **Resolved (D17):** yes — `--dry-run` lands in Run A2; it's the primary demonstration of the decision surface.

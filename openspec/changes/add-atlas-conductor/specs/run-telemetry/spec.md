@@ -12,15 +12,15 @@ The telemetry layer SHALL persist operational metadata only — job status, per-
 - **THEN** telemetry records the validation result and metadata, while the feature matrix remains only in the AtlasPatch HDF5 on disk
 
 ### Requirement: Append-only sink with pluggable backends
-The telemetry layer SHALL expose one append-only sink interface with a local backend (jsonl or sqlite) as the default and a BigQuery backend as an optional alternative. Switching backends SHALL NOT change what any agent records.
+The telemetry layer SHALL expose one append-only sink interface with a local backend (jsonl or sqlite) as the default, and the interface SHALL admit alternative backends (e.g. a BigQuery backend, added in phase 4 `add-conductor-distribution`) without changing what any agent records. Switching backends SHALL NOT change what any agent records.
 
 #### Scenario: Local backend is the default
 - **WHEN** no telemetry backend is configured
-- **THEN** events are appended to the local backend and the run does not require BigQuery credentials
+- **THEN** events are appended to the local backend and the run does not require any cloud credentials
 
-#### Scenario: BigQuery is opt-in
-- **WHEN** the BigQuery backend is configured
-- **THEN** the same records are appended to BigQuery through the same interface, with no change to the emitting agents
+#### Scenario: Alternative backend is opt-in behind the same interface
+- **WHEN** an alternative backend (such as BigQuery) is configured
+- **THEN** the same records are appended through the same interface, with no change to the emitting agents
 
 ### Requirement: Telemetry captures labeled recovery outcomes
 Each `slide_stage_outcomes` and `agent_events` record SHALL carry enough structure to reconstruct, for every failure, the tuple `(failure-signature, classification, chosen action, whether the action resolved the failure)`. Over a run this makes the telemetry an append-only, labeled dataset of recovery attempts and their results — usable now to measure classification hit-rate, and later to train a learned classifier without changing the plan or dispatch code.
