@@ -24,6 +24,7 @@
 - [ ] 4.3 Implement plan-time geometry-conflict blocking with actionable messages.
 - [ ] 4.4 Implement plan-delta integration so the planner is the single writer of plan state (including `mark_dependents_blocked`).
 - [ ] 4.5 (Optional, leaning yes) Implement `--dry-run` that prints the reconciled plan without dispatch.
+- [ ] 4.6 Implement a plan-time input-admissibility gate (D16): reject empty cohorts, directories with no WSI-extension files, and unreadable/zero-byte inputs with actionable blocks and reason codes (`empty-cohort`, `no-wsi-files`, `unreadable-input`); keep checks shallow (extension/existence/size/optional magic bytes) — no slide decode.
 
 ## 5. Execution adapters and worker
 
@@ -51,11 +52,14 @@
 
 - [ ] 8.1 Wire planner, worker, validator, and recovery as A2A agents (Google ADK); keep the scheduler as an in-process loop.
 - [ ] 8.2 Implement the terminal summary report driven by validator verdicts (per-slide outcome + reason + cohort counts).
+- [ ] 8.3 Render the per-slide chain-of-decisions trace in the report and `--dry-run` (D15): ordered reconcile → dispatch → validate(reason) → recover per slide, summary-first with detail on demand, sourced from the audit-trail records (operational metadata only — no pixels/PHI).
 
 ## 9. Tests, CI, and docs
 
 - [ ] 9.1 End-to-end no-GPU test: full planning → dispatch → validation → recovery → telemetry loop against the fake adapter, asserting the stage-granular recovery behavior (segment kept, only embed retried on injected OOM).
 - [ ] 9.2 Tests for cohort-state reconciliation (the state × requested-output decision table) and for geometry-conflict blocking.
+- [ ] 9.7 Tests for the input-admissibility gate (D16): `empty-cohort`, `no-wsi-files`, and `unreadable-input` each block before dispatch with no slide decode.
+- [ ] 9.8 Test that the report/`--dry-run` decision trace (D15) surfaces the ordered per-slide decisions from the audit trail and carries operational metadata only (no pixels/PHI).
 - [ ] 9.3 Add the no-GPU orchestrator loop to CI.
 - [ ] 9.4 Write the orchestration-layer usage guide (YAML config, running with the fake adapter, reading the report) and add a README pointer.
 - [ ] 9.5 CI: assert a PHI-laden slide stem injected via the fake adapter is pseudonymized or rejected and never persisted (D12); assert no egress carries pixels/PHI (D11 boundary).

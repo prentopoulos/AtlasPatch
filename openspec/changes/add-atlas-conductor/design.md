@@ -90,6 +90,18 @@ Metadata-only is strengthened to identifier-free: slide stems are pseudonymized 
 Every failure is logged as `(signature, classification, action, resolved?)`. Classification stays rule-based for the MVP, but the log makes hit-rate measurable and lets a learned classifier replace the heuristics later without touching plan/dispatch (D10 keeps the seam clean).
 - **Why:** This is the Pathology-CoT inversion applied to operations — replace a hand-coded policy with one learned from recorded traces. The fake adapter's *labeled* injected failures are the held-out eval cohort (the operational analogue of the paper's external validation cohort), so generalization across failure modes can be proven before the classifier is trusted on real slides.
 
+### D15 — Chain-of-decisions trace is a first-class report output (extends D3/D14, feeds task 8.2)
+The terminal report and `--dry-run` render, per slide, the *ordered decisions* that produced the outcome — reconcile → dispatch → validate (reason code) → recover — not just the final verdict and cohort counts.
+- **Why:** The thesis is that the contribution is the orchestrator's *decisions* (D1–D7); a report that shows only outcomes asserts that thesis without demonstrating it. The trace makes the decision surface the visible artifact and turns `--dry-run` into the primary demonstration ("what I'd do to N slides and why, touching nothing"). It is near-free: every decision is already written to the audit trail (task 10.1), so this is a rendering concern, not new computation.
+- **Boundary:** Operational metadata only — same PHI-free, no-pixel constraints as D9/D11/D12 (pseudonymized stems, reason codes, tuning deltas). Verbosity is controlled by summary-first output with per-slide detail on demand (dry-run / failures / opt-in).
+- **Provenance:** the reasoning-trace *presentation* pattern is adapted clean-room (idea only — no code, weights, or data) from NV-Reason-CXR-3B's "show the work" chain-of-thought; here the checklist is operational (config/geometry/state/dispatch/validate/recover), never clinical, preserving D11.
+
+### D16 — Plan-time input-admissibility gate; shallow, not deep (extends D2/D4)
+Before dispatch, the planner rejects inadmissible cohorts/inputs — empty cohort, no WSI-extension files, unreadable/zero-byte files — with an actionable block and a reason code (`empty-cohort`, `no-wsi-files`, `unreadable-input`), rather than dispatching and inheriting a silent per-slide failure.
+- **Why:** Without a front-door guard, a non-WSI or empty cohort reproduces exactly the silent exit-0 / missing-HDF5 failure this layer exists to eliminate. Catching it at plan time moves the failure from "late, mysterious, per-slide" to "early, structured, actionable" — on-thesis with D3/D4.
+- **Boundary — shallow by construction:** admissibility is a cheap check (extension allowlist + existence + non-zero size + optional magic bytes), *not* a slide decode. Deep WSI validation would need a slide-reader dependency and start reimplementing pipeline responsibilities, brushing the "don't reach into `atlas_patch`" invariant. Deep validation stays AtlasPatch's job; the gate only rejects obvious garbage.
+- **Provenance:** the out-of-distribution-rejection lesson is adapted (idea only) from the MedVision-AI failure mode (a non-chest image classified "pneumonia, 87.3%") — the operational analogue is refusing to confidently process input the pipeline cannot consume.
+
 ## Scope note — baked in now vs. deferred
 Baked into this change (load-bearing, painful to retrofit): D11–D14, the PHI-free telemetry gate, the HITL gate, the egress assertion, and the audited trail. Deferred to a clean follow-on change (additive layers, no rework): a DVC/Git data-lineage pipeline, a *learned* recovery classifier trained on the telemetry dataset, and a full EU AI Act / ISO 42001 compliance dossier.
 
@@ -101,6 +113,7 @@ Baked into this change (load-bearing, painful to retrofit): D11–D14, the PHI-f
 - **Job configs listing arbitrary files not under one directory** aren't natively dispatchable. → MVP requires the cohort to be a directory (matching AtlasPatch's directory mode and the SLURM `WSI_ROOT` pattern); link-farm support is a documented later enhancement.
 - **Geometry conflict against an existing HDF5 is a block, discovered late by AtlasPatch.** → The planner detects patch-size/target-mag mismatch at plan time via the validity predicate and blocks the item with an actionable message before dispatch.
 - **Naming/packaging drift into core.** → Separate `atlas_conductor/` package, separate entry point, heavy deps behind `atlas-patch[orchestrator]`; core install untouched.
+- **Input-admissibility gate could creep toward re-validating slides (D16).** → Keep it shallow (extension allowlist + existence + size + optional magic bytes); deep decode stays AtlasPatch's responsibility, preserving the no-reach-into-pipeline invariant.
 
 ## Migration Plan
 
@@ -109,6 +122,6 @@ Additive only; no migration of existing data or behavior. Rollout: land the pack
 ## Open Questions
 
 - BigQuery record families: keep the 4 proposed, or split `agent_events` into `agent_messages` vs `agent_decisions`?
-- Should the terminal report have a machine-readable sibling (JSON) in MVP, or is human-readable enough?
+- Should the terminal report have a machine-readable sibling (JSON) in MVP, or is human-readable enough? (The D15 decision trace serializes from the same audit-trail records, so a JSON sibling is the same data in another shape — leaning yes.)
 - Idempotency key composition — `(job_id, slide_stem, stage, geometry, encoder)` — is that sufficient to make resume safe across config edits?
 - Do we expose a `--dry-run` that prints the reconciled plan (planner only, no dispatch) in MVP? (Leaning yes — it's cheap and demonstrates the decision surface.)

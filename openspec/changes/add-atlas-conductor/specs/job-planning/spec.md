@@ -35,3 +35,18 @@ The planner SHALL detect, at plan time, when a slide's existing canonical HDF5 w
 #### Scenario: Existing HDF5 has incompatible patch size
 - **WHEN** a slide already has an HDF5 at `patch_size=256` and the job requests `patch-size 512`
 - **THEN** the planner marks the slide `blocked` with a message stating the conflict and the need for `--force` or a different output location, and does not dispatch it
+
+### Requirement: Reject inadmissible input at plan time
+Before dispatch, the planner SHALL reject a cohort whose input cannot be processed and SHALL mark it `blocked` with a reason code, rather than dispatching and inheriting a silent per-slide failure. Admissibility SHALL be a shallow check — cohort non-empty, at least one file matching a WSI extension allowlist, and each candidate file readable and non-zero size — and SHALL NOT decode slide contents; deep slide validation remains AtlasPatch's responsibility. Reason codes SHALL distinguish `empty-cohort`, `no-wsi-files`, and `unreadable-input`.
+
+#### Scenario: Cohort directory contains no WSI files
+- **WHEN** the cohort directory exists but contains no file matching the WSI extension allowlist
+- **THEN** the planner blocks the cohort with reason code `no-wsi-files` and dispatches no work
+
+#### Scenario: Empty cohort directory
+- **WHEN** the cohort directory is empty
+- **THEN** the planner blocks the cohort with reason code `empty-cohort` and dispatches no work
+
+#### Scenario: Unreadable or zero-byte input
+- **WHEN** a candidate WSI file is unreadable or zero bytes
+- **THEN** the planner marks that input `blocked` with reason code `unreadable-input` before dispatch, and admissibility performs no slide decode

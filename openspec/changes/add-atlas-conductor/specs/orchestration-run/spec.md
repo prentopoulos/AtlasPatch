@@ -22,6 +22,17 @@ On completion the orchestrator SHALL emit a terminal summary report that states,
 - **WHEN** a run finishes with some slides valid, one quarantined after exhausting retries, and one blocked on a precondition
 - **THEN** the report lists each slide with its outcome and reason and shows counts that sum to the cohort size
 
+### Requirement: Report surfaces the decision trace, not only outcomes
+The report SHALL surface, per slide, the ordered decisions that produced the outcome — state reconciliation, dispatch, validation with reason code, and any recovery action — and not only the final verdict and cohort counts. The trace SHALL be sourced from the append-only audit trail and SHALL contain operational metadata only (no pixels, no PHI). The report SHALL be summary-first, exposing per-slide decision detail on demand (including under `--dry-run`), so a large cohort does not force full-trace output.
+
+#### Scenario: Recovered slide shows its decision path
+- **WHEN** a slide is dispatched, fails validation on a NaN, is recovered by a bounded retry, and then validates
+- **THEN** the per-slide detail shows the ordered steps reconcile → dispatch → validate(`nan`) → recover(retry) → validate(valid), each carrying operational metadata only
+
+#### Scenario: Dry run shows decisions without dispatch
+- **WHEN** the orchestrator runs with `--dry-run`
+- **THEN** the report shows the per-slide reconciliation decisions (`skip`/`run`/`reuse`/`blocked`) with reasons and dispatches no work
+
 ### Requirement: Upstream pipeline is never modified
 The orchestrator SHALL integrate with AtlasPatch only by invoking its documented CLI commands and by reading its documented HDF5 output format. The orchestrator SHALL NOT import `atlas_patch` internal modules and SHALL NOT alter SAM2 segmentation, coordinate generation, feature extraction, the HDF5 format, or existing CLI behavior.
 
