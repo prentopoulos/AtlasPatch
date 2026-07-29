@@ -29,6 +29,6 @@
 
 ## 6. CI wiring and docs
 
-- [ ] 6.1 Ensure the new tests (Safe-Harbor rejection, egress containment, HITL hold/waiver, audit tamper detection, Model Card no-placeholder) run in the `app` CI job with the fake adapter (no GPU)
-- [ ] 6.2 Note the governance layer in the README/CHANGELOG where the phase-1 conductor is described, keeping the additive, upstream-untouched framing
-- [ ] 6.3 Run `openspec validate add-conductor-governance --strict`, `ruff`, `mypy`, and the test suite; confirm all green before archiving
+- [x] 6.1 Ensure the new tests (Safe-Harbor rejection, egress containment, HITL hold/waiver, audit tamper detection, Model Card no-placeholder) run in the `app` CI job with the fake adapter (no GPU)
+- [x] 6.2 Note the governance layer in the README/CHANGELOG where the phase-1 conductor is described, keeping the additive, upstream-untouched framing
+- [x] 6.3 Run `openspec validate add-conductor-governance --strict`, `ruff`, `mypy`, and the test suite; confirm all green before archiving

@@ -544,6 +544,15 @@ pip install "atlas-patch[orchestrator]"
 atlaspatch-conduct run job.yaml --dry-run   # preview the plan; drop --dry-run to execute
 ```
 
+The layer ships **by-construction governance guardrails** (`atlas_conductor.governance`),
+all additive over the metadata-only telemetry and none touching the ML pipeline: slide
+stems are pseudonymized and HIPAA Safe-Harbor identifiers rejected before anything is
+persisted, irreversible or expensive recovery actions (`force_reprocess`, `quarantine`,
+`block_job`) are held for human confirmation unless the run is explicitly unattended, and
+every consequential action is written to a tamper-evident, hash-chained audit trail. The
+maintained **[System/Model Card](MODEL_CARD.md)** documents the non-SaMD scope boundary and
+these safeguards as verifiable technical conditions (not a legal compliance certification).
+
 See the **[orchestration usage guide](docs/orchestration.md)** for the job-config schema,
 running with the fake (no-GPU) or real adapter, reading the report and decision trace, and
 the recovery and telemetry model.
