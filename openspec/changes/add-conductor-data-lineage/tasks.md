@@ -30,6 +30,6 @@
 
 ## 6. Guards, docs, and CI
 
-- [ ] 6.1 Extend the existing import-guard test so importing core `atlas_conductor` and running the base `atlaspatch` CLI import neither `dvc` nor the DVC backend module.
-- [ ] 6.2 Add an end-to-end test: a fake-adapter run with `lineage: {backend: manifest}` writes a manifest whose records content-address every produced output and reproduce identical hashes on re-record, and differ after an input's bytes change.
-- [ ] 6.3 Document the lineage subcommand, the `lineage:` config block, and the no-pixel-egress guarantee in the README/conductor docs; run ruff + mypy + pytest green with `dvc` absent.
+- [x] 6.1 Extend the existing import-guard test so importing core `atlas_conductor` and running the base `atlaspatch` CLI import neither `dvc` nor the DVC backend module.
+- [x] 6.2 Add an end-to-end test: a fake-adapter run with `lineage: {backend: manifest}` writes a manifest whose records content-address every produced output and reproduce identical hashes on re-record, and differ after an input's bytes change.
+- [x] 6.3 Document the lineage subcommand, the `lineage:` config block, and the no-pixel-egress guarantee in the README/conductor docs; run ruff + mypy + pytest green with `dvc` absent.

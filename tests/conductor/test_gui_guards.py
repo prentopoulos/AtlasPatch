@@ -42,6 +42,20 @@ def test_importing_the_core_cli_does_not_import_distribution_backends() -> None:
     subprocess.run([sys.executable, "-c", code], check=True)
 
 
+def test_importing_the_core_cli_does_not_import_dvc() -> None:
+    # The phase-5 DVC lineage backend imports/shells `dvc` only inside its own module's
+    # methods (design D-LIN-4); importing the core CLI + run façade must pull in neither
+    # `dvc` nor the `dvc_backend` module. Since `dvc` may not be installed (CI does not
+    # install it), a top-level import leak would also fail this subprocess outright.
+    forbidden = ["dvc", "atlas_conductor.lineage.dvc_backend"]
+    code = (
+        "import atlas_conductor.cli, atlas_conductor.run, sys; "
+        f"leaked = [m for m in {forbidden!r} if m in sys.modules]; "
+        "assert not leaked, f'dvc leaked into the core CLI: {leaked}'"
+    )
+    subprocess.run([sys.executable, "-c", code], check=True)
+
+
 def test_gui_command_shells_out_to_streamlit(tmp_path: Path, monkeypatch) -> None:
     captured: dict[str, object] = {}
 

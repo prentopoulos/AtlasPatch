@@ -9,7 +9,9 @@ same config produce byte-identical HDF5 outputs; enabling lineage must not pertu
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
+from typing import Any
 
 from atlas_conductor.config import JobConfig
 from atlas_conductor.contracts import Geometry, RequestedOutput
@@ -85,3 +87,49 @@ def test_enabling_lineage_does_not_change_run_outputs(tmp_path: Path) -> None:
     assert not (out_on / "telemetry" / "lineage.jsonl").exists()
     manifest_records = (out_on / MANIFEST_RELATIVE_PATH).read_text(encoding="utf-8").splitlines()
     assert len(manifest_records) == 3  # one per produced output
+
+
+def _read_manifest(out: Path) -> list[dict[str, Any]]:
+    return [
+        json.loads(line)
+        for line in (out / MANIFEST_RELATIVE_PATH).read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
+def _input_output_pairs(rows: list[dict[str, Any]]) -> set[tuple[tuple[str, ...], str]]:
+    # Per-run pseudonyms differ across runs (unlinkable by design), so compare on the
+    # content hashes, which are what "reproduce identically" and "detect change" are about.
+    return {(tuple(row["input_sha256"]), str(row["output_sha256"])) for row in rows}
+
+
+def test_config_driven_lineage_content_addresses_and_detects_change(tmp_path: Path) -> None:
+    # A fake-adapter run with `lineage: {backend: manifest}` (task 6.2 end-to-end).
+    cohort = _make_cohort(tmp_path, ["slide_a", "slide_b"])
+    out = tmp_path / "out"
+    config = _config(cohort, out, lineage="manifest")
+
+    run_job(config, JsonlTelemetrySink(out / "telemetry"))
+    first_rows = _read_manifest(out)
+
+    # Every produced output is content-addressed (input + output SHA-256, fingerprint).
+    assert len(first_rows) == 2
+    for row in first_rows:
+        assert len(str(row["output_sha256"])) == 64
+        assert row["input_sha256"] and all(len(h) == 64 for h in row["input_sha256"])
+        assert row["config_fingerprint"]
+    first_pairs = _input_output_pairs(first_rows)
+
+    # Re-record via a second run over unchanged bytes: the content-hash pairs reproduce exactly.
+    run_job(config, JsonlTelemetrySink(out / "telemetry2"))
+    second_rows = _read_manifest(out)[len(first_rows) :]  # only the newly appended records
+    assert _input_output_pairs(second_rows) == first_pairs
+
+    # Change one input's bytes and record again: a new input hash appears, absent before.
+    (cohort / "slide_a.svs").write_bytes(b"mutated-wsi-bytes")
+    before_mutation = len(_read_manifest(out))
+    run_job(config, JsonlTelemetrySink(out / "telemetry3"))
+    third_rows = _read_manifest(out)[before_mutation:]
+    prior_input_hashes = {h for row in first_rows for h in row["input_sha256"]}
+    new_input_hashes = {h for row in third_rows for h in row["input_sha256"]}
+    assert new_input_hashes - prior_input_hashes  # slide_a's mutated bytes hash is new

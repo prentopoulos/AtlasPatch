@@ -122,3 +122,42 @@ Every run appends metadata-only records — `jobs`, `slide_stage_outcomes`, `val
 **no image, mask, or embedding field exists** — so pixels and embeddings never leave the
 AtlasPatch HDF5. Each recovery attempt is logged with its `(signature, classification, action,
 resolved)` tuple, so the telemetry doubles as a labeled dataset of recovery outcomes.
+
+## Data lineage
+
+Telemetry records *what a run decided*; **lineage** content-addresses *which exact input bytes
+plus which config produced which output HDF5*. After a run, the lineage layer emits one record
+per produced output — the SHA-256 of each input WSI, a config fingerprint (geometry, encoders,
+requested output), the SHA-256 of the produced HDF5, the AtlasPatch tool version, and the
+`job_id` — keyed on the **pseudonymized** slide stem so it correlates with the telemetry above.
+
+Record it after the fact over a finished run's output directory:
+
+```bash
+atlaspatch-conduct lineage /data/out                    # default: manifest backend
+atlaspatch-conduct lineage /data/out --backend dvc      # opt-in DVC pointers
+```
+
+…or have a run record it automatically by adding a `lineage:` block to the job config (off
+unless present):
+
+```yaml
+lineage:
+  backend: manifest      # 'manifest' (default, stdlib-only) or 'dvc' (opt-in, orchestrator extra)
+```
+
+- **`manifest`** (default) writes `<output_dir>/lineage/manifest.jsonl` — one JSON record per
+  output, using only the Python standard library (no DVC, no network, no credentials).
+- **`dvc`** writes a `dvc.yaml` stage and `.dvc` pointers under `<output_dir>/lineage/dvc/`,
+  carrying the same hashes so **Git history becomes the lineage record**. It produces
+  committable files; when to `git add`/commit them is left to you.
+
+**No-pixel-egress guarantee.** Lineage persists metadata only — content **hashes**, config
+scalars, the tool version, and pseudonymized identifiers. It never copies, tracks, or pushes a
+WSI, tissue mask, or embedding into a DVC cache or remote, and issues no `dvc push`: an auditor
+can prove "these exact input bytes produced this exact output" from hashes alone, with the
+pixels never leaving your disk. Slide identity in every lineage artifact — including any
+DVC-tracked path — is the `slide_<hex>` pseudonym; raw filenames and HIPAA Safe-Harbor
+identifiers are rejected (fail closed) before anything is written. Enabling lineage changes no
+plan, dispatch, validation, recovery, or telemetry result — it only writes a new sibling
+artifact after the run completes.
