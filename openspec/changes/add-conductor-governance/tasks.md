@@ -24,8 +24,8 @@
 
 ## 5. System/Model Card finalized and drift-checked (D24)
 
-- [ ] 5.1 Move `MODEL_CARD.md` into the repo (root), resolve every `(to confirm)` placeholder against the shipped code, and make the HITL and PHI sections name the implemented modules and match the gate's actual behavior
-- [ ] 5.2 Add a CI/test check asserting the card contains no `(to confirm)`-style placeholder and that each described safeguard names an implemented module
+- [x] 5.1 Move `MODEL_CARD.md` into the repo (root), resolve every `(to confirm)` placeholder against the shipped code, and make the HITL and PHI sections name the implemented modules and match the gate's actual behavior
+- [x] 5.2 Add a CI/test check asserting the card contains no `(to confirm)`-style placeholder and that each described safeguard names an implemented module
 
 ## 6. CI wiring and docs
 
