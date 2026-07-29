@@ -24,6 +24,7 @@ from atlas_conductor.governance import AuditTrail, Confirmer, PhiSafeSink, defau
 from atlas_conductor.planning import Planner
 from atlas_conductor.scheduler import RunResult, Scheduler
 from atlas_conductor.telemetry import TelemetrySink
+from atlas_conductor.transport import AgentTransport, make_transport
 
 
 def make_adapter(name: str) -> tuple[ExecutionAdapter, str]:
@@ -47,6 +48,7 @@ def run_job(
     adapter_name: str = "fake",
     audit: AuditTrail | None = None,
     confirmer: Confirmer | None = None,
+    transport: AgentTransport | None = None,
 ) -> RunResult:
     """Plan and execute one job, returning the per-slide run result.
 
@@ -58,6 +60,11 @@ def run_job(
     the HITL confirmer defaults to the policy for ``config.unattended`` — hold irreversible
     actions when attended, waive (and record the waiver) when unattended (design D13).
     ``audit`` is the tamper-evident trail consequential actions are appended to.
+
+    ``transport`` routes the four inter-agent handoffs (design D-DIST-2); it defaults to the
+    one named by ``config.transport`` (in-process unless the config opts into ``a2a``),
+    built over the same gated sink so its ``message_flow`` rows are PHI-free too. Passing an
+    explicit transport (e.g. a stubbed A2A transport) overrides the config selection.
     """
     if adapter is None:
         adapter = FakeAdapter()
@@ -65,6 +72,8 @@ def run_job(
     if confirmer is None:
         confirmer = default_confirmer(config.unattended)
     plan = Planner(gated).build_plan(config)
+    if transport is None:
+        transport = make_transport(config.transport, gated, plan.job_id)
     scheduler = Scheduler(
         config,
         adapter,
@@ -72,5 +81,6 @@ def run_job(
         adapter_name=adapter_name,
         audit=audit,
         confirmer=confirmer,
+        transport=transport,
     )
     return scheduler.run(plan)

@@ -6,10 +6,10 @@
 
 ## 2. Agent-transport seam: interface + in-process (D-DIST-1, D-DIST-2)
 
-- [ ] 2.1 Create `atlas_conductor/transport/__init__.py` with an `AgentTransport` interface routing planner/worker/validator/recovery interactions, plus a `make_transport(name)` resolver mirroring `make_adapter`.
-- [ ] 2.2 Implement `InProcessTransport` calling the components directly and emitting one `MessageFlowRecord` per routed interaction, so outputs stay byte-identical to the current direct-call path.
-- [ ] 2.3 Wire `run.py`/`scheduler.py` agent call sites through the selected transport (default `in-process`) and add a `transport` selector to `config.py` (`JobConfig`), defaulting to in-process.
-- [ ] 2.4 Test: an in-process run records `message_flow` rows for each interaction and produces the same `RunResult` and family rows as the pre-change path (regression pin).
+- [x] 2.1 Create `atlas_conductor/transport/__init__.py` with an `AgentTransport` interface routing planner/worker/validator/recovery interactions, plus a `make_transport(name)` resolver mirroring `make_adapter`.
+- [x] 2.2 Implement `InProcessTransport` calling the components directly and emitting one `MessageFlowRecord` per routed interaction, so outputs stay byte-identical to the current direct-call path.
+- [x] 2.3 Wire `run.py`/`scheduler.py` agent call sites through the selected transport (default `in-process`) and add a `transport` selector to `config.py` (`JobConfig`), defaulting to in-process.
+- [x] 2.4 Test: an in-process run records `message_flow` rows for each interaction and produces the same `RunResult` and family rows as the pre-change path (regression pin).
 
 ## 3. A2A transport (D-DIST-5, D-DIST-6)
 

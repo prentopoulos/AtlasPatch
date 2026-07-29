@@ -29,6 +29,9 @@ MVP_COMMANDS: frozenset[Command] = frozenset({Command.SEGMENT_AND_GET_COORDS, Co
 
 _REQUIRED_ALWAYS = ("input_dir", "output_dir", "requested_output", "patch_size", "target_mag")
 
+# The transports selectable from a job config (design D-DIST-1).
+_TRANSPORTS = ("in-process", "a2a")
+
 
 class JobConfigError(ValueError):
     """A job config is missing a field, malformed, or requests unsupported output."""
@@ -46,6 +49,9 @@ class JobConfig:
     unattended: bool = False
     attempt_budget: int = 3
     tuning: Tuning = Tuning()
+    # Agent transport: 'in-process' (default, no cloud) or 'a2a' (Google ADK / A2A peers,
+    # orchestrator extra). Selecting it changes no agent's outputs (design D-DIST-1).
+    transport: str = "in-process"
 
     @property
     def command(self) -> Command:
@@ -109,6 +115,12 @@ def parse_job_config(raw: dict[str, Any]) -> JobConfig:
             "requested_output 'features' requires at least one encoder in 'encoders'"
         )
 
+    transport = str(data.get("transport", "in-process")).strip().lower() or "in-process"
+    if transport not in _TRANSPORTS:
+        raise JobConfigError(
+            f"unsupported transport {transport!r}; choose one of: {', '.join(_TRANSPORTS)}"
+        )
+
     geometry = Geometry(
         patch_size=_as_int(data["patch_size"], field="patch_size"),
         target_mag=_as_int(data["target_mag"], field="target_mag"),
@@ -127,6 +139,7 @@ def parse_job_config(raw: dict[str, Any]) -> JobConfig:
         encoders=encoders,
         unattended=bool(data.get("unattended", False)),
         attempt_budget=_as_int(data.get("attempt_budget", 3), field="attempt_budget"),
+        transport=transport,
     )
 
 

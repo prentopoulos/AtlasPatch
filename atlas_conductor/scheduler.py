@@ -52,6 +52,12 @@ from atlas_conductor.telemetry import (
     TelemetrySink,
     ValidationResultRecord,
 )
+from atlas_conductor.transport import (
+    AgentMessage,
+    AgentTransport,
+    InProcessTransport,
+    MessageType,
+)
 from atlas_conductor.validation import validate_output
 
 # Which requested-output the predicate evaluates for each stage's validity.
@@ -95,6 +101,7 @@ class Scheduler:
         adapter_name: str = "fake",
         audit: AuditTrail | None = None,
         confirmer: Confirmer | None = None,
+        transport: AgentTransport | None = None,
     ) -> None:
         self._config = config
         self._adapter = adapter
@@ -105,12 +112,18 @@ class Scheduler:
         # defaults to auto-approve so its unit tests stay ungated. ``run_job`` passes the
         # real confirmer selected from ``JobConfig.unattended``.
         self._confirmer: Confirmer = confirmer or AutoApproveConfirmer()
+        # The agent transport routes the four inter-agent handoffs, recording one
+        # ``message_flow`` row each (design D-DIST-2). A bare scheduler defaults to the
+        # record-only in-process transport, rebound with the plan's job_id in run().
+        self._transport_arg = transport
+        self._transport: AgentTransport = InProcessTransport(telemetry, "")
         self._worker = Worker(adapter, telemetry, "")  # rebound per run in run()
 
     def run(self, plan: Plan) -> RunResult:
         started_at = datetime.now(timezone.utc).isoformat()
         self._worker = Worker(self._adapter, self._telemetry, plan.job_id)
         self._planner = Planner(self._telemetry, job_id=plan.job_id)
+        self._transport = self._transport_arg or InProcessTransport(self._telemetry, plan.job_id)
         self._telemetry.record_agent_event(
             AgentEventRecord(
                 job_id=plan.job_id,
@@ -128,6 +141,20 @@ class Scheduler:
 
         self._record_job(plan, result, started_at)
         return result
+
+    def _route(
+        self, from_agent: Agent, to_agent: Agent, message_type: MessageType, node: PlanNode
+    ) -> None:
+        """Record one inter-agent handoff on the message-flow family (design D-DIST-2)."""
+        self._transport.route(
+            AgentMessage(
+                from_agent=from_agent.value,
+                to_agent=to_agent.value,
+                message_type=message_type.value,
+                slide_stem=node.slide_stem,
+                stage=node.stage.value,
+            )
+        )
 
     # -- first pass --------------------------------------------------------------
 
@@ -154,6 +181,8 @@ class Scheduler:
         )
         for node in runnable:
             node.attempts += 1
+            # planner → worker: the reconciled plan node is handed to the worker to execute.
+            self._route(Agent.PLANNER, Agent.WORKER, MessageType.DISPATCH, node)
             self._telemetry.record_agent_event(
                 AgentEventRecord(
                     job_id=plan.job_id,
@@ -202,6 +231,11 @@ class Scheduler:
 
             pending: tuple[RecoveryProposal, str | None] | None = None
             while True:
+                # worker → validator: an executed outcome is handed to the validator. A
+                # skip-if-valid check with no prior dispatch (last_outcome is None) is not a
+                # worker handoff, so it is not routed.
+                if last_outcome is not None:
+                    self._route(Agent.WORKER, Agent.VALIDATOR, MessageType.OUTCOME, node)
                 verdict = self._validate_stage(plan, node)
                 if pending is not None:
                     proposal, label = pending
@@ -211,6 +245,8 @@ class Scheduler:
                 if verdict.valid:
                     break
 
+                # validator → recovery: an invalid verdict is handed to recovery to classify.
+                self._route(Agent.VALIDATOR, Agent.RECOVERY, MessageType.CLASSIFY, node)
                 classification, signature = classify(last_outcome, verdict)
                 proposal = propose(classification, signature, node, last_outcome)
                 label = last_outcome.injected_label if last_outcome else None
@@ -224,6 +260,9 @@ class Scheduler:
                     self._record_recovery_outcome(plan, node, proposal, label, resolved=False)
                     return self._held_result(plan, node, proposal)
 
+                # recovery → planner: the recovery proposal is handed back to the planner to
+                # apply (mutate the plan node), completing the choreography cycle.
+                self._route(Agent.RECOVERY, Agent.PLANNER, MessageType.APPLY, node)
                 self._planner.apply_recovery(plan, node, proposal)
                 self._audit_action(
                     plan,
@@ -268,6 +307,8 @@ class Scheduler:
                 plan.job_id, node.slide_stem, node.stage, plan.geometry
             ),
         )
+        # planner → worker: the per-file retry node is handed to the worker to re-execute.
+        self._route(Agent.PLANNER, Agent.WORKER, MessageType.DISPATCH, node)
         self._audit_action(
             plan, "dispatch", node, f"retry {node.command.value} attempt={node.attempts + 1}"
         )
