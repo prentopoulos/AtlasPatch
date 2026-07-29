@@ -12,14 +12,14 @@
 
 ## 3. Observability GUI panels
 
-- [ ] 3.1 Add `atlas_conductor/gui/app.py` — the Streamlit app shell that loads telemetry via the reader (import `streamlit` here only, never in the core path).
-- [ ] 3.2 Run-history panel from `jobs`; per-slide verdict panel from `validation_results` + `slide_stage_outcomes` (structural verdict + reason code, no score); decision-trace panel from `agent_events`; cohort-metrics panel with valid/skipped/quarantined/blocked tallies (observability-gui spec).
-- [ ] 3.3 Ensure the app renders a clean empty state when no runs exist and displays slide identifiers exactly as persisted (pseudonyms for gated runs), never re-deriving a raw stem.
+- [x] 3.1 Add `atlas_conductor/gui/app.py` — the Streamlit app shell that loads telemetry via the reader (import `streamlit` here only, never in the core path).
+- [x] 3.2 Run-history panel from `jobs`; per-slide verdict panel from `validation_results` + `slide_stage_outcomes` (structural verdict + reason code, no score); decision-trace panel from `agent_events`; cohort-metrics panel with valid/skipped/quarantined/blocked tallies (observability-gui spec).
+- [x] 3.3 Ensure the app renders a clean empty state when no runs exist and displays slide identifiers exactly as persisted (pseudonyms for gated runs), never re-deriving a raw stem.
 
 ## 4. Agent choreography (Level 1)
 
-- [ ] 4.1 Add `atlas_conductor/gui/choreography.py`: derive per-agent lit/dim state and the latest slide/stage from `agent_events` (D-GUI-4) — no new telemetry family.
-- [ ] 4.2 Render the four logical agents + scheduler as active/idle and a "now processing slide X · stage Y" ticker that follows the latest event and idles when no slide is active. Draw no inter-agent message edges (Level-2 out of scope, agent-choreography spec).
+- [x] 4.1 Add `atlas_conductor/gui/choreography.py`: derive per-agent lit/dim state and the latest slide/stage from `agent_events` (D-GUI-4) — no new telemetry family.
+- [x] 4.2 Render the four logical agents + scheduler as active/idle and a "now processing slide X · stage Y" ticker that follows the latest event and idles when no slide is active. Draw no inter-agent message edges (Level-2 out of scope, agent-choreography spec).
 
 ## 5. Launch surface
 

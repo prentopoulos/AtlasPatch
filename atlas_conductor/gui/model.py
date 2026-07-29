@@ -33,11 +33,12 @@ class SlideView:
 
 @dataclass(frozen=True)
 class RunView:
-    """A whole run assembled for rendering: its job row and per-slide verdicts."""
+    """A whole run assembled for rendering: its job row, verdicts, and event stream."""
 
     job_id: str
     job: dict[str, Any]
     slides: list[SlideView]
+    events: list[dict[str, Any]]  # the run's full ordered agent_events (choreography source)
 
     @property
     def cohort_size(self) -> int:
@@ -85,7 +86,8 @@ def _build_run_view(
         )
         for stem, row in sorted(terminal.items())
     ]
-    return RunView(job_id=job.get("job_id", ""), job=job, slides=slides)
+    ordered_events = sorted(events, key=lambda e: e.get("timestamp", ""))
+    return RunView(job_id=job.get("job_id", ""), job=job, slides=slides, events=ordered_events)
 
 
 def build_run_views(reader: TelemetryReader) -> list[RunView]:
