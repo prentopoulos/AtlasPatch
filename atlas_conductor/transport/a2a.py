@@ -27,11 +27,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 
 import httpx
 import uvicorn
 from a2a.client import ClientConfig, ClientFactory
+from a2a.client.client_factory import TransportProtocol
 from a2a.server.agent_execution.agent_executor import AgentExecutor
 from a2a.server.agent_execution.context import RequestContext
 from a2a.server.events.event_queue import EventQueue
@@ -53,7 +54,6 @@ from a2a.types import (
     Role,
     SendMessageConfiguration,
     SendMessageRequest,
-    TransportProtocol,
 )
 from fastapi import FastAPI
 
@@ -115,6 +115,12 @@ def build_agent_card(agent: str, host: str = "127.0.0.1") -> AgentCard:
     )
 
 
+# Optional observability hook: called on the server with (agent, received_text) each time a
+# peer receives a handoff. Used by the loopback runner to log receipts and by the integration
+# test to prove genuine over-the-wire delivery.
+OnReceive = Callable[[str, str], None]
+
+
 class _HandoffExecutor(AgentExecutor):
     """A peer agent's server-side executor: acknowledge a received handoff.
 
@@ -123,15 +129,19 @@ class _HandoffExecutor(AgentExecutor):
     performs no pipeline work and reads no slide data.
     """
 
-    def __init__(self, agent: str) -> None:
+    def __init__(self, agent: str, on_receive: OnReceive | None = None) -> None:
         self._agent = agent
+        self._on_receive = on_receive
 
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         task_id = context.task_id
         context_id = context.context_id
         if not task_id or not context_id:
             return
-        logger.info("[%s] received handoff: %s", self._agent, context.get_user_input())
+        received = context.get_user_input()
+        logger.info("[%s] received handoff: %s", self._agent, received)
+        if self._on_receive is not None:
+            self._on_receive(self._agent, received)
         updater = TaskUpdater(event_queue=event_queue, task_id=task_id, context_id=context_id)
         await updater.add_artifact(
             parts=[Part(text=f"{self._agent} acknowledged handoff")],
@@ -144,11 +154,13 @@ class _HandoffExecutor(AgentExecutor):
         return
 
 
-def create_agent_app(agent: str, host: str = "127.0.0.1") -> FastAPI:
+def create_agent_app(
+    agent: str, host: str = "127.0.0.1", on_receive: OnReceive | None = None
+) -> FastAPI:
     """Build the FastAPI app exposing one peer agent over A2A HTTP+JSON."""
     card = build_agent_card(agent, host)
     handler = DefaultRequestHandler(
-        agent_executor=_HandoffExecutor(agent),
+        agent_executor=_HandoffExecutor(agent, on_receive),
         task_store=InMemoryTaskStore(),
         agent_card=card,
     )
@@ -159,6 +171,24 @@ def create_agent_app(agent: str, host: str = "127.0.0.1") -> FastAPI:
         rest_routes=create_rest_routes(request_handler=handler, path_prefix=_REST_PREFIX),
     )
     return app
+
+
+def build_servers(
+    host: str = "127.0.0.1", on_receive: OnReceive | None = None
+) -> list[uvicorn.Server]:
+    """One configured (unstarted) ``uvicorn.Server`` per peer agent on its loopback port.
+
+    Shared by :func:`serve_peer_set` (the demo runner) and the loopback integration test so
+    both stand up the peers the same way.
+    """
+    return [
+        uvicorn.Server(
+            uvicorn.Config(
+                create_agent_app(agent, host, on_receive), host=host, port=port, log_level="warning"
+            )
+        )
+        for agent, port in AGENT_PORTS.items()
+    ]
 
 
 class A2ATransport(AgentTransport):
@@ -228,12 +258,9 @@ class A2ATransport(AgentTransport):
             self._loop.close()
 
 
-async def serve_peer_set(host: str = "127.0.0.1") -> None:
+async def serve_peer_set(host: str = "127.0.0.1", on_receive: OnReceive | None = None) -> None:
     """Start every peer agent's A2A server on loopback and serve until interrupted."""
-    servers = [
-        uvicorn.Server(uvicorn.Config(create_agent_app(agent, host), host=host, port=port))
-        for agent, port in AGENT_PORTS.items()
-    ]
+    servers = build_servers(host, on_receive)
     logger.info("serving %d A2A peers on %s: %s", len(servers), host, AGENT_PORTS)
     await asyncio.gather(*(server.serve() for server in servers))
 
