@@ -21,13 +21,16 @@ One phase = one change = one PR. Each phase runs the same five steps:
    spec should be reviewed before implementation.
 
 4. **Implement.** Run `/opsx:apply`, committing per task (or per logical group) so commits
-   map to `tasks.md` items.
+   map to `tasks.md` items. With the first implementation commit, flip this phase's row in
+   `PROJECT.md`'s phase table from `Planned` to `In progress`.
 
 5. **Archive, then merge.** Once every task in `tasks.md` is checked off, run
-   `/opsx:archive <name>` on the same branch and commit the result as the final commit.
+   `/opsx:archive <name>` on the same branch, flip this phase's `PROJECT.md` status from
+   `In progress` to `Done` in the same commit, and commit the result as the final commit.
    Confirm CI is green (the `specs` job runs `openspec validate`; the `app` job runs
    typecheck/lint/test/build), then merge with a **regular merge commit** — not squash —
-   to preserve the spec → tasks → archive commit structure.
+   to preserve the spec → tasks → archive commit structure. Merging the PR lands the
+   accurate `Done` status on `main`, so the status column never drifts.
 
 After merge, the next invocation of `next-phase` starts again at step 1 from the updated
 `main`.
@@ -37,6 +40,9 @@ After merge, the next invocation of `next-phase` starts again at step 1 from the
 - **One PR per phase, staged commits** — not a separate spec-approval PR followed by an
   implementation PR. The spec-only first commit is the review point within the single PR.
 - **Do not archive before all tasks are complete**, and **do not merge before archiving.**
+- **Keep `PROJECT.md`'s phase-status column current within each phase's own PR** — `In
+  progress` when implementation starts, `Done` in the archive commit — so it never drifts
+  from what has actually merged to `main`.
 - **Never squash-merge** a phase — the linear spec → implementation → archive history is
   the audit trail.
 - The upstream ML pipeline in `atlas_patch/` is not modified by orchestration-layer
