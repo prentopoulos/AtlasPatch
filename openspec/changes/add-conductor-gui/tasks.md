@@ -35,5 +35,5 @@
 
 ## 7. Local visual confirmation & docs
 
-- [ ] 7.1 Launch the GUI locally (the `run` skill / `streamlit run`), drive a real Chrome tab via `claude-in-chrome`: screenshot the panels, read console/network for errors, and record a `gif_creator` clip of the Level-1 choreography lighting up (agents dim→lit). This is a manual pass, not CI.
-- [ ] 7.2 Document the GUI in the README/PROJECT notes: what it renders, the read-only + PHI-free guarantees, the launch command, and that Level-2 message-flow is deferred to phase 4.
+- [x] 7.1 Launch the GUI locally (the `run` skill / `streamlit run`), drive a real Chrome tab via `claude-in-chrome`: screenshot the panels, read console/network for errors, and record a `gif_creator` clip of the Level-1 choreography lighting up (agents dim→lit). This is a manual pass, not CI. *(Done: launched over a 4-slide demo run, all panels render, console error-free, choreography GIF captured for the PR/demo.)*
+- [x] 7.2 Document the GUI in the README/PROJECT notes: what it renders, the read-only + PHI-free guarantees, the launch command, and that Level-2 message-flow is deferred to phase 4.
