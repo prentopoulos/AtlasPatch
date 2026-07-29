@@ -627,6 +627,32 @@ telemetry:
 (behind the `orchestrator` extra), so the base install stays cloud-free. The GUI and the
 report read the local JSONL backend; BigQuery is a write target for cohort-scale analysis.
 
+### Data lineage (content-addressed provenance)
+
+Where telemetry records *what a run decided*, **lineage** content-addresses *which exact input
+bytes plus which config produced which output HDF5*: one record per output tying the SHA-256 of
+each input WSI + a config fingerprint to the SHA-256 of the produced HDF5, keyed on the
+pseudonymized stem. Record it post-hoc, or automatically at run end via a config block:
+
+```bash
+atlaspatch-conduct lineage <output_dir>              # default: stdlib manifest backend
+atlaspatch-conduct lineage <output_dir> --backend dvc
+```
+
+```yaml
+# job.yaml
+lineage:
+  backend: manifest      # 'manifest' (default, stdlib-only) or 'dvc' (opt-in)
+```
+
+The default `manifest` backend writes `<output_dir>/lineage/manifest.jsonl` with only the
+standard library. The opt-in `dvc` backend writes a `dvc.yaml` stage + `.dvc` pointers so Git
+history becomes the lineage record. Lineage persists **hashes, not pixels** — it never copies,
+tracks, or `dvc push`-es a WSI/mask/embedding, and every tracked identifier is the `slide_<hex>`
+pseudonym, so no raw filename or HIPAA identifier lands in the manifest or any tracked path.
+`dvc` lives in the `orchestrator` extra and is touched only inside the DVC backend, so the base
+CLI import graph stays DVC-free. See the [orchestration guide](docs/orchestration.md#data-lineage).
+
 ## SLURM job scripts
 
 We prepared ready-to-run SLURM templates under `jobs/`:

@@ -126,6 +126,43 @@ def export_report_cmd(telemetry_dir: Path, fmt: str) -> None:
     click.echo(export_report(telemetry_dir, fmt=fmt))
 
 
+@cli.command()
+@click.argument("output_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option(
+    "--backend",
+    type=click.Choice(["manifest", "dvc"]),
+    default="manifest",
+    show_default=True,
+    help="Lineage backend: 'manifest' is stdlib-only (default, CI path); 'dvc' writes "
+    "version-controllable pointers and needs the orchestrator extra.",
+)
+@click.option(
+    "--telemetry-dir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=None,
+    help="Directory holding the run's telemetry. Defaults to <output_dir>/telemetry.",
+)
+def lineage(output_dir: Path, backend: str, telemetry_dir: Path | None) -> None:
+    """Record content-addressed, PHI-free lineage over a completed run's OUTPUT_DIR.
+
+    Reads the produced HDF5s under OUTPUT_DIR and the run's telemetry — the same read-only,
+    PHI-free path the GUI and export-report use — and writes a lineage manifest (or DVC
+    pointers) alongside them. The run's HDF5s and telemetry are left unmodified. ``dvc`` is
+    imported only when ``--backend dvc`` is selected (never at CLI import).
+    """
+    from atlas_conductor.lineage.resolve import LineageResolutionError, from_output_dir
+    from atlas_conductor.run import make_lineage_backend
+
+    try:
+        run_input = from_output_dir(output_dir, telemetry_dir)
+    except LineageResolutionError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    result = make_lineage_backend(backend).record(run_input)
+    location = result.manifest_path or output_dir
+    click.echo(f"recorded {len(result.records)} lineage record(s) via {backend} -> {location}")
+
+
 def main() -> None:
     cli()
 

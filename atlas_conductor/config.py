@@ -35,6 +35,9 @@ _TRANSPORTS = ("in-process", "a2a")
 # The telemetry backends selectable from a job config (design D-DIST-4).
 _TELEMETRY_BACKENDS = ("jsonl", "bigquery")
 
+# The lineage backends selectable from a job config (design D-LIN-1/7).
+_LINEAGE_BACKENDS = ("manifest", "dvc")
+
 
 class JobConfigError(ValueError):
     """A job config is missing a field, malformed, or requests unsupported output."""
@@ -59,6 +62,10 @@ class JobConfig:
     # dataset and the orchestrator extra). Switching changes no agent's records (design D-DIST-4).
     telemetry_backend: str = "jsonl"
     telemetry_dataset: str | None = None
+    # Lineage backend: ``None`` (default) means lineage recording is off; a name enables
+    # recording at run end through that backend — 'manifest' (default, credential-free) or
+    # 'dvc' (opt-in, orchestrator extra). Enabling it changes no run output (design D-LIN-7).
+    lineage_backend: str | None = None
 
     @property
     def command(self) -> Command:
@@ -129,6 +136,7 @@ def parse_job_config(raw: dict[str, Any]) -> JobConfig:
         )
 
     telemetry_backend, telemetry_dataset = _parse_telemetry(data.get("telemetry"))
+    lineage_backend = _parse_lineage(data.get("lineage"))
 
     geometry = Geometry(
         patch_size=_as_int(data["patch_size"], field="patch_size"),
@@ -151,6 +159,7 @@ def parse_job_config(raw: dict[str, Any]) -> JobConfig:
         transport=transport,
         telemetry_backend=telemetry_backend,
         telemetry_dataset=telemetry_dataset,
+        lineage_backend=lineage_backend,
     )
 
 
@@ -174,6 +183,25 @@ def _parse_telemetry(value: Any) -> tuple[str, str | None]:
     if backend == "bigquery" and not dataset:
         raise JobConfigError("telemetry backend 'bigquery' requires a 'dataset'")
     return backend, dataset
+
+
+def _parse_lineage(value: Any) -> str | None:
+    """Parse the optional ``lineage:`` mapping into a backend name (``None`` = off).
+
+    Absent or empty → lineage recording is off (the default). A present block enables it;
+    ``backend`` defaults to ``manifest`` and must be one of :data:`_LINEAGE_BACKENDS`.
+    """
+    if value in (None, ""):
+        return None
+    if not isinstance(value, dict):
+        raise JobConfigError(f"'lineage' must be a mapping, got {type(value).__name__}")
+    backend = str(value.get("backend", "manifest")).strip().lower() or "manifest"
+    if backend not in _LINEAGE_BACKENDS:
+        raise JobConfigError(
+            f"unsupported lineage backend {backend!r}; choose one of: "
+            f"{', '.join(_LINEAGE_BACKENDS)}"
+        )
+    return backend
 
 
 def _parse_encoders(value: Any) -> tuple[str, ...]:

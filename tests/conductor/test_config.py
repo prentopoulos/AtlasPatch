@@ -75,3 +75,27 @@ def test_features_without_encoder_rejected() -> None:
     del raw["encoders"]
     with pytest.raises(JobConfigError, match="encoder"):
         parse_job_config(raw)
+
+
+def test_lineage_is_off_by_default() -> None:
+    config = parse_job_config(_valid_features_config())
+    assert config.lineage_backend is None
+
+
+def test_lineage_block_enables_manifest_by_default() -> None:
+    raw = _valid_features_config()
+    raw["lineage"] = {}
+    assert parse_job_config(raw).lineage_backend == "manifest"
+
+
+def test_lineage_backend_dvc_parsed() -> None:
+    raw = _valid_features_config()
+    raw["lineage"] = {"backend": "dvc"}
+    assert parse_job_config(raw).lineage_backend == "dvc"
+
+
+def test_unknown_lineage_backend_rejected() -> None:
+    raw = _valid_features_config()
+    raw["lineage"] = {"backend": "sqlite"}
+    with pytest.raises(JobConfigError, match="unsupported lineage backend"):
+        parse_job_config(raw)
