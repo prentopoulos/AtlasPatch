@@ -14,10 +14,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Install OpenSpec CLI
-        run: npm install -g openspec
       - name: Validate all specs and changes (strict)
-        run: openspec validate --all --strict
+        run: npx --yes @fission-ai/openspec@1 validate --all --strict
 
   app:
     # Lint and run the no-GPU orchestrator loop against the fake adapter (task 9.3).
