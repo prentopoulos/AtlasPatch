@@ -81,6 +81,27 @@ def run(
     click.echo(build_report(result, telemetry, trace=trace))
 
 
+@cli.command(name="export-report")
+@click.argument("telemetry_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option(
+    "--format",
+    "fmt",
+    type=click.Choice(["json", "html"]),
+    default="json",
+    show_default=True,
+    help="The machine-readable report sibling to render (design D18).",
+)
+def export_report_cmd(telemetry_dir: Path, fmt: str) -> None:
+    """Render the HTML/JSON sibling of the report from a TELEMETRY_DIR.
+
+    Reads the append-only telemetry only — the same PHI-free read path the GUI uses — so
+    the sibling cannot diverge from what the GUI shows. Imports no ``streamlit``.
+    """
+    from atlas_conductor.gui.export import export_report
+
+    click.echo(export_report(telemetry_dir, fmt=fmt))
+
+
 def main() -> None:
     cli()
 

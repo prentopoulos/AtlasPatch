@@ -6,9 +6,9 @@
 
 ## 2. Report export (shared read surface)
 
-- [ ] 2.1 Add a report-export module (or extend `atlas_conductor/report.py`) that assembles the per-slide outcomes + reason codes + decision traces + cohort counts once, and serializes a JSON sibling of the terminal report (D-GUI-5, report-export spec).
-- [ ] 2.2 Add an HTML rendering of the same assembled structure so HTML and JSON cannot diverge from each other or the terminal report.
-- [ ] 2.3 Tests: JSON sibling mirrors the terminal report's outcomes and cohort counts; a gated run's export contains only PHI-free metadata (pseudonyms, verdicts, reason codes, counts) — no raw stem, pixel, mask, or embedding.
+- [x] 2.1 Add a report-export module (or extend `atlas_conductor/report.py`) that assembles the per-slide outcomes + reason codes + decision traces + cohort counts once, and serializes a JSON sibling of the terminal report (D-GUI-5, report-export spec).
+- [x] 2.2 Add an HTML rendering of the same assembled structure so HTML and JSON cannot diverge from each other or the terminal report.
+- [x] 2.3 Tests: JSON sibling mirrors the terminal report's outcomes and cohort counts; a gated run's export contains only PHI-free metadata (pseudonyms, verdicts, reason codes, counts) — no raw stem, pixel, mask, or embedding.
 
 ## 3. Observability GUI panels
 

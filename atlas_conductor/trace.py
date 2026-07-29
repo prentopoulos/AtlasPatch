@@ -21,15 +21,25 @@ from atlas_conductor.telemetry import TelemetrySink
 _TRACE_EVENTS = ("reconcile", "dispatch", "verdict", "blocked", "recover")
 
 
-def slide_traces(telemetry: TelemetrySink) -> dict[str, list[dict[str, Any]]]:
-    """Group the trace-relevant agent events by slide stem, preserving order."""
+def group_traces(events: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    """Group trace-relevant ``agent_events`` rows by slide stem, preserving order.
+
+    Works on already-read rows so the terminal report (via a sink), the GUI, and the
+    report export (both via the read-only reader) share one definition of a slide's
+    decision chain and cannot diverge.
+    """
     traces: dict[str, list[dict[str, Any]]] = {}
-    for event in telemetry.read_agent_events():
+    for event in events:
         stem = event.get("slide_stem")
         if not stem or event.get("event") not in _TRACE_EVENTS:
             continue
         traces.setdefault(stem, []).append(event)
     return traces
+
+
+def slide_traces(telemetry: TelemetrySink) -> dict[str, list[dict[str, Any]]]:
+    """Group the trace-relevant agent events by slide stem, preserving order."""
+    return group_traces(telemetry.read_agent_events())
 
 
 def render_slide_trace(events: list[dict[str, Any]], indent: str = "      ") -> list[str]:
