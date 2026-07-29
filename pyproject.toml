@@ -96,15 +96,26 @@ moozy = [
 orchestrator = [
     # Phase 1 (atlas_conductor operational core) needs only PyYAML at runtime; h5py
     # and numpy are already core deps. The heavy choreography/telemetry backends —
-    # Google ADK, A2A, and google-cloud-bigquery — are added to this same extra when
-    # they are wired in phase 2 (governance) / phase 4 (distribution), behind guarded
-    # imports so the core `atlaspatch` CLI never imports them.
+    # A2A, Google ADK, and google-cloud-bigquery — are added to this same extra when
+    # they are wired in phase 4 (distribution), behind guarded imports so the core
+    # `atlaspatch` CLI never imports them.
     "pyyaml>=6.0",
     # Phase 3 (add-conductor-gui): the read-only observability GUI. Imported only inside
     # `atlas_conductor/gui/app.py` (never from the core CLI/telemetry path — enforced by
     # a CI import-guard test), so `pip install atlas-patch` and the `atlaspatch` CLI are
     # unaffected.
     "streamlit>=1.30",
+    # Phase 4 (add-conductor-distribution): the A2A agent transport and the BigQuery
+    # telemetry backend. The transport runs the four agents as Google ADK agents exposed
+    # over A2A (`google-adk` brings the a2a-sdk / httpx / starlette stack), served with
+    # `uvicorn`, in `atlas_conductor/transport/a2a.py`; the BigQuery backend uses
+    # `google-cloud-bigquery` in `atlas_conductor/telemetry_bigquery.py`. Each is imported
+    # only inside its own guarded module — never from the core CLI/telemetry path, enforced
+    # by the CI import-guard test — so `pip install atlas-patch` and the base `atlaspatch`
+    # CLI stay cloud-free (design D-DIST-5). Verified against google-adk 2.5.0.
+    "google-adk>=1.5.0",
+    "uvicorn>=0.29",
+    "google-cloud-bigquery>=3.20",
 ]
 release = [
     "build>=1.2.2",

@@ -17,8 +17,7 @@ import click
 from atlas_conductor import __version__
 from atlas_conductor.config import JobConfigError, load_job_config
 from atlas_conductor.report import build_dry_run_report, build_report
-from atlas_conductor.run import make_adapter, plan_job, run_job
-from atlas_conductor.telemetry import JsonlTelemetrySink
+from atlas_conductor.run import make_adapter, make_telemetry_sink, plan_job, run_job
 
 
 @click.group()
@@ -69,7 +68,7 @@ def run(
         raise click.ClickException(str(exc)) from exc
 
     sink_dir = telemetry_dir or (config.output_dir / "telemetry")
-    telemetry = JsonlTelemetrySink(sink_dir)
+    telemetry = make_telemetry_sink(config, str(sink_dir))
 
     if dry_run:
         plan = plan_job(config, telemetry)

@@ -166,3 +166,27 @@ def test_choreography_marks_latest_actor_active_with_ticker(tmp_path: Path) -> N
     assert "**validator** — 🟢 active" in blob
     assert "**planner** — ⚪ idle" in blob
     assert "Now processing: slide slideB · stage segment" in blob
+
+
+# -- Level-2 message-flow view (5.3) ---------------------------------------------
+
+
+def test_message_flow_edges_render_from_recorded_messages(tmp_path: Path) -> None:
+    # A real run records message_flow, so the Level-2 panel draws directed agent edges.
+    at = _apptest(_run_cohort(tmp_path, ["a", "b"]))
+    assert not at.exception
+    blob = "\n".join(m.value for m in at.markdown)
+    assert "Agent message flow (Level 2)" in "\n".join(s.value for s in at.subheader)
+    assert "planner → worker" in blob
+    assert "worker → validator" in blob
+
+
+def test_message_flow_degrades_to_level_1_when_absent(tmp_path: Path) -> None:
+    # A run with no message_flow rows (e.g. pre-phase-4) degrades to component-state only.
+    tele = tmp_path / "tele"
+    _write_controlled(tele)  # writes no message_flow family
+    at = _apptest(tele)
+    assert not at.exception
+    blob = "\n".join(m.value for m in at.markdown)
+    assert "No message flow recorded for this run" in blob
+    assert "→" not in blob  # no edges are drawn

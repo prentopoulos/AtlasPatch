@@ -39,6 +39,7 @@ class RunView:
     job: dict[str, Any]
     slides: list[SlideView]
     events: list[dict[str, Any]]  # the run's full ordered agent_events (choreography source)
+    message_flow: list[dict[str, Any]]  # the run's message_flow rows (Level-2 view source)
 
     @property
     def cohort_size(self) -> int:
@@ -64,6 +65,7 @@ def _build_run_view(
     outcomes: list[dict[str, Any]],
     validations: list[dict[str, Any]],
     events: list[dict[str, Any]],
+    message_flow: list[dict[str, Any]],
 ) -> RunView:
     # Terminal outcome per slide = the last-appended stage outcome (append order is
     # chronological), matching the report's per-slide accounting.
@@ -87,7 +89,14 @@ def _build_run_view(
         for stem, row in sorted(terminal.items())
     ]
     ordered_events = sorted(events, key=lambda e: e.get("timestamp", ""))
-    return RunView(job_id=job.get("job_id", ""), job=job, slides=slides, events=ordered_events)
+    ordered_flow = sorted(message_flow, key=lambda m: m.get("timestamp", ""))
+    return RunView(
+        job_id=job.get("job_id", ""),
+        job=job,
+        slides=slides,
+        events=ordered_events,
+        message_flow=ordered_flow,
+    )
 
 
 def build_run_views(reader: TelemetryReader) -> list[RunView]:
@@ -95,6 +104,7 @@ def build_run_views(reader: TelemetryReader) -> list[RunView]:
     outcomes_by_job = _group_by_job(reader.slide_stage_outcomes())
     validations_by_job = _group_by_job(reader.validation_results())
     events_by_job = _group_by_job(reader.agent_events())
+    flow_by_job = _group_by_job(reader.message_flow())
     views: list[RunView] = []
     for job in reader.jobs():
         job_id = job.get("job_id", "")
@@ -104,6 +114,7 @@ def build_run_views(reader: TelemetryReader) -> list[RunView]:
                 outcomes_by_job.get(job_id, []),
                 validations_by_job.get(job_id, []),
                 events_by_job.get(job_id, []),
+                flow_by_job.get(job_id, []),
             )
         )
     return views

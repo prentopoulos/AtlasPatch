@@ -20,6 +20,7 @@ from pathlib import Path
 import streamlit as st
 
 from atlas_conductor.gui.choreography import AGENTS, choreography_state
+from atlas_conductor.gui.messageflow import message_flow_state
 from atlas_conductor.gui.model import TERMINAL_OUTCOMES, RunView, build_run_views
 from atlas_conductor.gui.reader import TelemetryReader
 from atlas_conductor.trace import render_slide_trace
@@ -74,6 +75,19 @@ def _render_choreography(view: RunView) -> None:
         st.markdown("Now processing: idle")
 
 
+def _render_message_flow(view: RunView) -> None:
+    st.subheader("Agent message flow (Level 2)")
+    state = message_flow_state(view.message_flow)
+    if not state.has_flow:
+        # Degrade to Level-1 component-state (rendered above) when a run recorded no messages
+        # — e.g. a pre-phase-4 run. No edges are drawn (agent-choreography spec).
+        st.markdown("No message flow recorded for this run — showing component-state only.")
+        return
+    for edge in state.edges:
+        pulse = "🔴" if (edge.from_agent, edge.to_agent) == state.latest else "▫️"
+        st.markdown(f"{pulse} **{edge.from_agent} → {edge.to_agent}** ({edge.count})")
+
+
 def _render_metrics(view: RunView) -> None:
     st.subheader("Cohort metrics")
     st.metric("cohort", view.cohort_size)
@@ -121,6 +135,7 @@ def main() -> None:
     _render_history(views)
     view = _select_run(views)
     _render_choreography(view)
+    _render_message_flow(view)
     _render_metrics(view)
     _render_verdicts(view)
     _render_trace(view)

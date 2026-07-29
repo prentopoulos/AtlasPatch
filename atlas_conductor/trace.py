@@ -38,8 +38,17 @@ def group_traces(events: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]
 
 
 def slide_traces(telemetry: TelemetrySink) -> dict[str, list[dict[str, Any]]]:
-    """Group the trace-relevant agent events by slide stem, preserving order."""
-    return group_traces(telemetry.read_agent_events())
+    """Group the trace-relevant agent events by slide stem, preserving order.
+
+    A write-oriented backend (e.g. the opt-in BigQuery sink, design D-DIST-4) may not
+    implement reads — reads are served by the local JSONL backend and the GUI. In that case
+    the decision trace degrades to empty rather than crashing the report.
+    """
+    try:
+        events = telemetry.read_agent_events()
+    except NotImplementedError:
+        return {}
+    return group_traces(events)
 
 
 def render_slide_trace(events: list[dict[str, Any]], indent: str = "      ") -> list[str]:

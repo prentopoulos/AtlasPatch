@@ -14,10 +14,15 @@ The ``slide_stage_outcomes`` records carry the labeled recovery fields
 labeled dataset of recovery attempts.
 
 The sink is one pluggable interface (design D9): the local JSONL backend is the
-default and needs no cloud credentials; a BigQuery backend is added in phase 4 behind
-the same interface without changing what any agent records. The phase-2 PHI-free
-write gate (design D12) will wrap this sink as a write-time filter — additive,
-because the records are already metadata-only.
+default and needs no cloud credentials; the opt-in BigQuery backend (phase 4,
+``atlas_conductor.telemetry_bigquery``) is added behind the same interface without
+changing what any agent records. The phase-2 PHI-free write gate (design D12) wraps
+this sink as a write-time filter — additive, because the records are already
+metadata-only.
+
+Phase 4 (``add-conductor-distribution``) adds a fifth family, ``message_flow``: one
+metadata-only record per inter-agent interaction, emitted by both the in-process and the
+A2A transport (design D-DIST-2/3), which the GUI Level-2 message-flow view renders.
 """
 
 from __future__ import annotations
@@ -113,6 +118,27 @@ class AgentEventRecord:
     timestamp: str = ""
 
 
+@dataclass(frozen=True)
+class MessageFlowRecord:
+    """One row in ``message_flow``: a single inter-agent interaction (design D-DIST-3).
+
+    Emitted by both the in-process and the A2A transport for each routed interaction, so
+    the GUI Level-2 message-flow view renders from persisted telemetry rather than a live
+    socket. All fields are operational metadata — agent identifiers, an enum message type,
+    and a correlation id — with no array field, so the metadata-only invariant (design D9)
+    holds by type. ``slide_stem`` flows through the same PHI-free gate as the other families.
+    """
+
+    job_id: str
+    from_agent: str  # planner / worker / validator / recovery / scheduler
+    to_agent: str
+    message_type: str  # a MessageType value (declarative intent of the message)
+    correlation_id: str
+    slide_stem: str | None = None
+    stage: str | None = None
+    timestamp: str = ""
+
+
 class TelemetrySink(ABC):
     """The append-only sink interface. Only typed records — no array method exists."""
 
@@ -132,12 +158,20 @@ class TelemetrySink(ABC):
     def record_agent_event(self, record: AgentEventRecord) -> None:
         ...
 
+    @abstractmethod
+    def record_message_flow(self, record: MessageFlowRecord) -> None:
+        ...
+
     def read_agent_events(self) -> list[dict[str, Any]]:
         """Read back the ``agent_events`` family as rows (for the decision trace)."""
         raise NotImplementedError
 
     def read_slide_stage_outcomes(self) -> list[dict[str, Any]]:
         """Read back the ``slide_stage_outcomes`` family as rows."""
+        raise NotImplementedError
+
+    def read_message_flow(self) -> list[dict[str, Any]]:
+        """Read back the ``message_flow`` family as rows (for the Level-2 view)."""
         raise NotImplementedError
 
 
@@ -173,6 +207,7 @@ class JsonlTelemetrySink(TelemetrySink):
         "slide_stage_outcomes": "slide_stage_outcomes.jsonl",
         "validation_results": "validation_results.jsonl",
         "agent_events": "agent_events.jsonl",
+        "message_flow": "message_flow.jsonl",
     }
 
     def __init__(self, directory: str | Path) -> None:
@@ -199,6 +234,9 @@ class JsonlTelemetrySink(TelemetrySink):
     def record_agent_event(self, record: AgentEventRecord) -> None:
         self._append("agent_events", record)
 
+    def record_message_flow(self, record: MessageFlowRecord) -> None:
+        self._append("message_flow", record)
+
     def read_family(self, family: str) -> list[dict[str, Any]]:
         """Read back a family as a list of rows (used by the report and tests)."""
         path = self.directory / self._FILES[family]
@@ -218,6 +256,9 @@ class JsonlTelemetrySink(TelemetrySink):
     def read_slide_stage_outcomes(self) -> list[dict[str, Any]]:
         return self.read_family("slide_stage_outcomes")
 
+    def read_message_flow(self) -> list[dict[str, Any]]:
+        return self.read_family("message_flow")
+
 
 class InMemoryTelemetrySink(TelemetrySink):
     """A backend that keeps records in lists — convenient for tests and assertions."""
@@ -227,6 +268,7 @@ class InMemoryTelemetrySink(TelemetrySink):
         self.slide_stage_outcomes: list[SlideStageOutcomeRecord] = []
         self.validation_results: list[ValidationResultRecord] = []
         self.agent_events: list[AgentEventRecord] = []
+        self.message_flow: list[MessageFlowRecord] = []
 
     def record_job(self, record: JobRecord) -> None:
         self.jobs.append(record)
@@ -240,8 +282,14 @@ class InMemoryTelemetrySink(TelemetrySink):
     def record_agent_event(self, record: AgentEventRecord) -> None:
         self.agent_events.append(record)
 
+    def record_message_flow(self, record: MessageFlowRecord) -> None:
+        self.message_flow.append(record)
+
     def read_agent_events(self) -> list[dict[str, Any]]:
         return [_record_to_dict(r) for r in self.agent_events]
 
     def read_slide_stage_outcomes(self) -> list[dict[str, Any]]:
         return [_record_to_dict(r) for r in self.slide_stage_outcomes]
+
+    def read_message_flow(self) -> list[dict[str, Any]]:
+        return [_record_to_dict(r) for r in self.message_flow]
