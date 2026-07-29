@@ -19,8 +19,8 @@
 
 ## 4. CLI subcommand
 
-- [ ] 4.1 Add `atlaspatch-conduct lineage <output-dir>` to `cli.py` with `--backend {manifest,dvc}` (default `manifest`), recording lineage over a finished run's outputs + telemetry; import no `dvc` at CLI module level.
-- [ ] 4.2 Test the subcommand records a manifest over a fake-adapter run and leaves the run's HDF5s and telemetry unmodified.
+- [x] 4.1 Add `atlaspatch-conduct lineage <output-dir>` to `cli.py` with `--backend {manifest,dvc}` (default `manifest`), recording lineage over a finished run's outputs + telemetry; import no `dvc` at CLI module level.
+- [x] 4.2 Test the subcommand records a manifest over a fake-adapter run and leaves the run's HDF5s and telemetry unmodified.
 
 ## 5. DVC backend, behind the extra (D-LIN-4)
 
