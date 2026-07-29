@@ -100,6 +100,11 @@ orchestrator = [
     # they are wired in phase 2 (governance) / phase 4 (distribution), behind guarded
     # imports so the core `atlaspatch` CLI never imports them.
     "pyyaml>=6.0",
+    # Phase 3 (add-conductor-gui): the read-only observability GUI. Imported only inside
+    # `atlas_conductor/gui/app.py` (never from the core CLI/telemetry path — enforced by
+    # a CI import-guard test), so `pip install atlas-patch` and the `atlaspatch` CLI are
+    # unaffected.
+    "streamlit>=1.30",
 ]
 release = [
     "build>=1.2.2",

@@ -1,8 +1,8 @@
 ## 1. Packaging & telemetry read path
 
-- [ ] 1.1 Add `streamlit` (with a pinned lower bound) to the `orchestrator` optional-dependency extra in `pyproject.toml`; note in the comment that it is imported only inside `atlas_conductor/gui/`.
-- [ ] 1.2 Create the `atlas_conductor/gui/` package and add `reader.py`: a read-only telemetry reader that opens the JSONL family files (`jobs`, `slide_stage_outcomes`, `validation_results`, `agent_events`) and returns rows as dicts, deriving filenames from the same mapping `JsonlTelemetrySink` declares. No append/write method (D-GUI-1).
-- [ ] 1.3 Unit-test the reader: write records through `JsonlTelemetrySink` to a temp dir, read them back with the reader, assert round-trip equality per family and a clean empty-state when files are absent.
+- [x] 1.1 Add `streamlit` (with a pinned lower bound) to the `orchestrator` optional-dependency extra in `pyproject.toml`; note in the comment that it is imported only inside `atlas_conductor/gui/`.
+- [x] 1.2 Create the `atlas_conductor/gui/` package and add `reader.py`: a read-only telemetry reader that opens the JSONL family files (`jobs`, `slide_stage_outcomes`, `validation_results`, `agent_events`) and returns rows as dicts, deriving filenames from the same mapping `JsonlTelemetrySink` declares. No append/write method (D-GUI-1).
+- [x] 1.3 Unit-test the reader: write records through `JsonlTelemetrySink` to a temp dir, read them back with the reader, assert round-trip equality per family and a clean empty-state when files are absent.
 
 ## 2. Report export (shared read surface)
 
