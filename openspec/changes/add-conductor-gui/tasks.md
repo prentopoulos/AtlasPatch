@@ -23,15 +23,15 @@
 
 ## 5. Launch surface
 
-- [ ] 5.1 Provide the launch path — a `atlaspatch-conduct gui` subcommand that shells to `streamlit run atlas_conductor/gui/app.py` (or a documented direct invocation) — pointing at a telemetry directory. Resolve the D-GUI-2 open question here.
+- [x] 5.1 Provide the launch path — a `atlaspatch-conduct gui` subcommand that shells to `streamlit run atlas_conductor/gui/app.py` (or a documented direct invocation) — pointing at a telemetry directory. Resolve the D-GUI-2 open question here.
 
 ## 6. CI-grade verification (AppTest)
 
-- [ ] 6.1 Add a `streamlit.testing.v1.AppTest` suite: build a fixture telemetry dir, `AppTest.from_file(app).run()`, assert history/verdict/trace/metrics panels populate from the fixture rows and no `at.exception` is raised.
-- [ ] 6.2 Guardrail assertions (D18): no image element is ever produced by the app; verdict panels contain reason codes and no confidence/probability token; a gated-run fixture renders pseudonyms and no raw stem.
-- [ ] 6.3 Choreography AppTest: given `agent_events` with a known latest actor, assert the right agent is active, others idle, and the ticker shows the expected slide/stage.
-- [ ] 6.4 Import-guard test: importing `atlas_conductor.cli` (the core path) pulls in no `streamlit` module — mirrors the phase-2 no-array/egress guards.
-- [ ] 6.5 Ensure the CI `app` job installs the `orchestrator` extra so the AppTest suite runs; confirm the suite is green with no browser/server/GPU.
+- [x] 6.1 Add a `streamlit.testing.v1.AppTest` suite: build a fixture telemetry dir, `AppTest.from_file(app).run()`, assert history/verdict/trace/metrics panels populate from the fixture rows and no `at.exception` is raised.
+- [x] 6.2 Guardrail assertions (D18): no image element is ever produced by the app; verdict panels contain reason codes and no confidence/probability token; a gated-run fixture renders pseudonyms and no raw stem.
+- [x] 6.3 Choreography AppTest: given `agent_events` with a known latest actor, assert the right agent is active, others idle, and the ticker shows the expected slide/stage.
+- [x] 6.4 Import-guard test: importing `atlas_conductor.cli` (the core path) pulls in no `streamlit` module — mirrors the phase-2 no-array/egress guards.
+- [x] 6.5 Ensure the CI `app` job installs the `orchestrator` extra so the AppTest suite runs; confirm the suite is green with no browser/server/GPU.
 
 ## 7. Local visual confirmation & docs
 
