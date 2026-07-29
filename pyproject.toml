@@ -93,6 +93,14 @@ moozy = [
     "timm>=0.9.0",
     "moozy>=0.1.0",
 ]
+orchestrator = [
+    # Phase 1 (atlas_conductor operational core) needs only PyYAML at runtime; h5py
+    # and numpy are already core deps. The heavy choreography/telemetry backends —
+    # Google ADK, A2A, and google-cloud-bigquery — are added to this same extra when
+    # they are wired in phase 2 (governance) / phase 4 (distribution), behind guarded
+    # imports so the core `atlaspatch` CLI never imports them.
+    "pyyaml>=6.0",
+]
 release = [
     "build>=1.2.2",
     "twine>=5.1.1",
@@ -112,13 +120,14 @@ dev = [
 
 [project.scripts]
 atlaspatch = "atlas_patch.cli:main"
+atlaspatch-conduct = "atlas_conductor.cli:main"
 
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["atlas_patch*"]
+include = ["atlas_patch*", "atlas_conductor*"]
 
 [tool.setuptools.package-dir]
 "" = "."
@@ -128,6 +137,9 @@ include = ["atlas_patch*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "atlas_patch.__version__"}
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
