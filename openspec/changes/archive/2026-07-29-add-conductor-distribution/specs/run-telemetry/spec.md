@@ -7,8 +7,8 @@ The telemetry layer SHALL expose one append-only sink interface with a local bac
 - **WHEN** no telemetry backend is configured
 - **THEN** events are appended to the local backend and the run does not require any cloud credentials
 
-#### Scenario: BigQuery backend is opt-in behind the same interface
-- **WHEN** the BigQuery backend is configured with a dataset
+#### Scenario: Alternative backend is opt-in behind the same interface
+- **WHEN** an alternative backend (the BigQuery backend) is configured with a dataset
 - **THEN** the same records are appended through the same interface as row inserts, with no change to the emitting agents
 
 #### Scenario: BigQuery rows match the local rows

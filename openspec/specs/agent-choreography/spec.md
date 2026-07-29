@@ -30,10 +30,27 @@ most recent `agent_events` row for the run, using the slide identifier exactly a
 - **WHEN** the latest event carries no slide/stage (e.g. planning or run completion)
 - **THEN** the ticker shows an idle/summary state rather than a stale slide
 
-### Requirement: Level-2 message-flow is out of scope
-The change SHALL NOT implement the Level-2 true A2A message-flow view (peer messages pulsing
-as edges between agent nodes). That view depends on the phase-4 A2A wiring and is deferred.
+### Requirement: Level-2 message-flow view
+The GUI SHALL provide a Level-2 message-flow view rendering the four logical agents (and the
+scheduler) as nodes with directed edges between them, each edge derived from the
+`message_flow` telemetry family and pulsing on the recency of the latest message between that
+pair. The view SHALL read the persisted `message_flow` family rather than subscribing to any
+live transport, keeping the GUI a read-only tailer.
 
-#### Scenario: No message-flow edges are drawn
-- **WHEN** the choreography view renders
-- **THEN** it shows component-state (lit/dim) only and draws no inter-agent message edges
+#### Scenario: Edges render from recorded messages
+- **WHEN** a run has `message_flow` rows
+- **THEN** the view draws a directed edge for each observed `(from_agent, to_agent)` pair and emphasizes the most recently active edge
+
+#### Scenario: Populated for an in-process run
+- **WHEN** the run was produced by the in-process transport (no live A2A network)
+- **THEN** the Level-2 view still renders edges from the recorded `message_flow` family
+
+### Requirement: Level-2 degrades to Level-1 when no message flow exists
+When a run has no `message_flow` rows (for example a pre-phase-4 run or a run whose transport
+recorded none), the Level-2 view SHALL degrade to an explicit Level-1-only state showing the
+component-state nodes with no edges and a clear "no message flow recorded" indication, rather
+than rendering a broken or empty graph.
+
+#### Scenario: Older run without the family
+- **WHEN** the selected run has no `message_flow` rows
+- **THEN** the view shows the component-state nodes only, draws no edges, and indicates that no message flow was recorded for the run
