@@ -32,6 +32,7 @@ from atlas_conductor.governance.phi import is_pseudonym, pseudonymize_stem, safe
 from atlas_conductor.telemetry import (
     AgentEventRecord,
     JobRecord,
+    MessageFlowRecord,
     SlideStageOutcomeRecord,
     TelemetrySink,
     ValidationResultRecord,
@@ -67,6 +68,11 @@ class PhiSafeSink(TelemetrySink):
 
     def record_agent_event(self, record: AgentEventRecord) -> None:
         self._guard(record, self._inner.record_agent_event)
+
+    def record_message_flow(self, record: MessageFlowRecord) -> None:
+        # The generic ``_guard`` path pseudonymizes ``slide_stem`` and scans ``detail`` the
+        # same way as every other family, so the new family is gated with no special-casing.
+        self._guard(record, self._inner.record_message_flow)
 
     def _guard(self, record: _R, delegate: Callable[[_R], None]) -> None:
         safe = self._pseudonymize(record)
@@ -123,3 +129,6 @@ class PhiSafeSink(TelemetrySink):
 
     def read_slide_stage_outcomes(self) -> list[dict[str, Any]]:
         return self._inner.read_slide_stage_outcomes()
+
+    def read_message_flow(self) -> list[dict[str, Any]]:
+        return self._inner.read_message_flow()

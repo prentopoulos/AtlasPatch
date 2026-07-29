@@ -1,8 +1,8 @@
 ## 1. Message-flow telemetry family (D-DIST-3)
 
-- [ ] 1.1 Add a frozen `MessageFlowRecord` `(job_id, from_agent, to_agent, message_type, correlation_id, slide_stem?, stage?, timestamp)` to `atlas_conductor/telemetry.py`, scalars/enums/ids only — no array field.
-- [ ] 1.2 Add `record_message_flow` to the `TelemetrySink` ABC and implement it on `JsonlTelemetrySink` (new `message_flow.jsonl` file + `read_family` wiring) and `InMemoryTelemetrySink`.
-- [ ] 1.3 Extend the metadata-only-by-type test to `MessageFlowRecord` (asserting no image/array-accepting method exists) and assert `PhiSafeSink` pseudonymizes its `slide_stem` on the same path as the other families.
+- [x] 1.1 Add a frozen `MessageFlowRecord` `(job_id, from_agent, to_agent, message_type, correlation_id, slide_stem?, stage?, timestamp)` to `atlas_conductor/telemetry.py`, scalars/enums/ids only — no array field.
+- [x] 1.2 Add `record_message_flow` to the `TelemetrySink` ABC and implement it on `JsonlTelemetrySink` (new `message_flow.jsonl` file + `read_family` wiring) and `InMemoryTelemetrySink`.
+- [x] 1.3 Extend the metadata-only-by-type test to `MessageFlowRecord` (asserting no image/array-accepting method exists) and assert `PhiSafeSink` pseudonymizes its `slide_stem` on the same path as the other families.
 
 ## 2. Agent-transport seam: interface + in-process (D-DIST-1, D-DIST-2)
 
