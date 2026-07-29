@@ -28,6 +28,10 @@ from typing import Any
 # The genesis predecessor hash — a fixed anchor the first real entry chains onto.
 GENESIS_HASH = "0" * 64
 
+# Audit payloads carry operational metadata only — never a pixel, mask, or embedding. The
+# no-array guarantee is enforced by construction: a payload value must be a JSON scalar.
+_SCALAR_TYPES = (str, int, float, bool, type(None))
+
 
 def _utcnow() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -76,6 +80,12 @@ class AuditTrail(ABC):
         """Read the trail back as ordered rows (for verification / inspection)."""
 
     def _make_entry(self, prev_hash: str, action: str, payload: dict[str, Any]) -> AuditEntry:
+        for key, value in payload.items():
+            if not isinstance(value, _SCALAR_TYPES):
+                raise TypeError(
+                    f"audit payload field {key!r} must be a scalar (no array can be "
+                    f"recorded), got {type(value).__name__}"
+                )
         timestamp = _utcnow()
         return AuditEntry(
             action=action,

@@ -102,15 +102,17 @@ class PhiSafeSink(TelemetrySink):
     def _reject(self, record: Any, findings: dict[str, list[str]]) -> None:
         """Drop the record (fail closed) and record the rejection in the audit trail."""
         if self._audit is not None:
+            shapes = sorted({shape for shapes in findings.values() for shape in shapes})
             self._audit.append(
                 "phi-gate-rejection",
                 {
                     "job_id": getattr(record, "job_id", ""),
                     "slide_stem": getattr(record, "slide_stem", None),
                     "record_type": type(record).__name__,
-                    "fields": sorted(findings),
-                    # The *shapes* found — never the matched identifier value.
-                    "shapes": sorted({shape for shapes in findings.values() for shape in shapes}),
+                    # Comma-joined so the audit payload stays scalar-only (no array can be
+                    # recorded); names the *fields* and *shapes*, never the matched value.
+                    "fields": ",".join(sorted(findings)),
+                    "shapes": ",".join(shapes),
                 },
             )
 
