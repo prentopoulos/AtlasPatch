@@ -223,6 +223,7 @@ class PlanNode:
     target: TaskTarget
     decision: Decision = Decision.RUN
     reason: ReasonCode | None = None
+    detail: str = ""
     dependencies: tuple[str, ...] = ()
     attempt_budget: int = 3
     attempts: int = 0

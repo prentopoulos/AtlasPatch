@@ -126,6 +126,19 @@ class Scheduler:
         worker = Worker(self._adapter, self._telemetry, plan.job_id)
         for node in runnable:
             node.attempts += 1
+            # Per-slide dispatch marker so the decision trace (design D15) has an ordered
+            # dispatch step per slide, even though the first pass is one invocation.
+            self._telemetry.record_agent_event(
+                AgentEventRecord(
+                    job_id=plan.job_id,
+                    agent=Agent.WORKER.value,
+                    event="dispatch",
+                    slide_stem=node.slide_stem,
+                    stage=node.stage.value,
+                    detail=f"{node.decision.value} command={node.command.value} "
+                    f"attempt={node.attempts}",
+                )
+            )
         return worker.execute(task)
 
     def _account_cohort(self, plan: Plan) -> RunResult:
@@ -133,6 +146,11 @@ class Scheduler:
         result = RunResult(job_id=plan.job_id, plan=plan)
         terminal_stage = STAGES_FOR_OUTPUT[plan.requested_output][-1]
         for node in plan.nodes_for(terminal_stage):
+            if node.decision is Decision.BLOCKED:
+                # Never dispatched (geometry conflict or inadmissible input); account it
+                # from the plan-time block reason, not a post-hoc filesystem verdict.
+                result.slides.append(self._blocked_slide(plan, node))
+                continue
             verdict = validate_output(
                 node.target.expected_h5_path,
                 plan.geometry,
@@ -141,6 +159,32 @@ class Scheduler:
             )
             result.slides.append(self._slide_result(plan, node, verdict))
         return result
+
+    def _blocked_slide(self, plan: Plan, node: PlanNode) -> SlideResult:
+        reason = node.reason or ReasonCode.DEPENDENCY_BLOCKED
+        self._telemetry.record_slide_stage_outcome(
+            SlideStageOutcomeRecord(
+                job_id=plan.job_id,
+                slide_stem=node.slide_stem,
+                stage=node.stage.value,
+                command=node.command.value,
+                attempt=node.attempts,
+                outcome=SlideOutcome.BLOCKED.value,
+                reason_code=reason.value,
+            )
+        )
+        self._telemetry.record_agent_event(
+            AgentEventRecord(
+                job_id=plan.job_id,
+                agent=Agent.PLANNER.value,
+                event="blocked",
+                slide_stem=node.slide_stem,
+                stage=node.stage.value,
+                reason_code=reason.value,
+                detail=node.detail,
+            )
+        )
+        return SlideResult(node.slide_stem, SlideOutcome.BLOCKED, reason, node.detail)
 
     def _slide_result(self, plan: Plan, node: PlanNode, verdict: Verdict) -> SlideResult:
         was_skip = node.decision is Decision.SKIP
