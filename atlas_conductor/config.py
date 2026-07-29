@@ -32,6 +32,9 @@ _REQUIRED_ALWAYS = ("input_dir", "output_dir", "requested_output", "patch_size",
 # The transports selectable from a job config (design D-DIST-1).
 _TRANSPORTS = ("in-process", "a2a")
 
+# The telemetry backends selectable from a job config (design D-DIST-4).
+_TELEMETRY_BACKENDS = ("jsonl", "bigquery")
+
 
 class JobConfigError(ValueError):
     """A job config is missing a field, malformed, or requests unsupported output."""
@@ -52,6 +55,10 @@ class JobConfig:
     # Agent transport: 'in-process' (default, no cloud) or 'a2a' (Google ADK / A2A peers,
     # orchestrator extra). Selecting it changes no agent's outputs (design D-DIST-1).
     transport: str = "in-process"
+    # Telemetry backend: 'jsonl' (default, credential-free) or 'bigquery' (opt-in, needs a
+    # dataset and the orchestrator extra). Switching changes no agent's records (design D-DIST-4).
+    telemetry_backend: str = "jsonl"
+    telemetry_dataset: str | None = None
 
     @property
     def command(self) -> Command:
@@ -121,6 +128,8 @@ def parse_job_config(raw: dict[str, Any]) -> JobConfig:
             f"unsupported transport {transport!r}; choose one of: {', '.join(_TRANSPORTS)}"
         )
 
+    telemetry_backend, telemetry_dataset = _parse_telemetry(data.get("telemetry"))
+
     geometry = Geometry(
         patch_size=_as_int(data["patch_size"], field="patch_size"),
         target_mag=_as_int(data["target_mag"], field="target_mag"),
@@ -140,7 +149,31 @@ def parse_job_config(raw: dict[str, Any]) -> JobConfig:
         unattended=bool(data.get("unattended", False)),
         attempt_budget=_as_int(data.get("attempt_budget", 3), field="attempt_budget"),
         transport=transport,
+        telemetry_backend=telemetry_backend,
+        telemetry_dataset=telemetry_dataset,
     )
+
+
+def _parse_telemetry(value: Any) -> tuple[str, str | None]:
+    """Parse the optional ``telemetry:`` mapping into (backend, dataset).
+
+    Absent or empty → the default JSONL backend. ``backend: bigquery`` requires a ``dataset``.
+    """
+    if value in (None, ""):
+        return "jsonl", None
+    if not isinstance(value, dict):
+        raise JobConfigError(f"'telemetry' must be a mapping, got {type(value).__name__}")
+    backend = str(value.get("backend", "jsonl")).strip().lower() or "jsonl"
+    if backend not in _TELEMETRY_BACKENDS:
+        raise JobConfigError(
+            f"unsupported telemetry backend {backend!r}; choose one of: "
+            f"{', '.join(_TELEMETRY_BACKENDS)}"
+        )
+    dataset_value = value.get("dataset")
+    dataset = str(dataset_value).strip() if dataset_value not in (None, "") else None
+    if backend == "bigquery" and not dataset:
+        raise JobConfigError("telemetry backend 'bigquery' requires a 'dataset'")
+    return backend, dataset
 
 
 def _parse_encoders(value: Any) -> tuple[str, ...]:

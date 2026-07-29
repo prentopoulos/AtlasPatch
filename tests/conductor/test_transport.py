@@ -8,13 +8,24 @@ stubbed A2A transport produce identical results (the parity invariant, design D-
 
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
+
+import pytest
 
 from atlas_conductor.config import JobConfig
 from atlas_conductor.contracts import Geometry, RequestedOutput, SlideOutcome
 from atlas_conductor.run import run_job
 from atlas_conductor.telemetry import InMemoryTelemetrySink
-from atlas_conductor.transport import AgentMessage, AgentTransport, InProcessTransport
+from atlas_conductor.transport import (
+    AgentMessage,
+    AgentTransport,
+    InProcessTransport,
+    TransportUnavailableError,
+    make_transport,
+)
+
+_A2A_INSTALLED = importlib.util.find_spec("a2a") is not None
 
 
 def _make_cohort(root: Path, stems: list[str]) -> Path:
@@ -61,6 +72,40 @@ def _family_rows_modulo_volatile(sink: InMemoryTelemetrySink) -> dict[str, list[
             rows.append(row)
         stripped[name] = rows
     return stripped
+
+
+def test_make_transport_resolves_in_process_and_rejects_unknown() -> None:
+    sink = InMemoryTelemetrySink()
+    assert isinstance(make_transport("in-process", sink, "job"), InProcessTransport)
+    with pytest.raises(ValueError, match="unknown transport"):
+        make_transport("bogus", sink, "job")
+
+
+@pytest.mark.skipif(_A2A_INSTALLED, reason="a2a-sdk is installed; the extra is present")
+def test_a2a_transport_needs_the_orchestrator_extra() -> None:
+    # Without the extra, selecting the A2A transport raises a clear, actionable error
+    # naming the extra (agent-transport spec) — the default in-process path is unaffected.
+    with pytest.raises(TransportUnavailableError, match="orchestrator"):
+        make_transport("a2a", InMemoryTelemetrySink(), "job")
+
+
+@pytest.mark.skipif(not _A2A_INSTALLED, reason="a2a-sdk not installed; loopback path is optional")
+def test_a2a_transport_records_flow_without_live_peers() -> None:
+    # Optional (skips without the extra so SDK/install issues can't gate CI, task 6.2): the
+    # real A2A transport records the message_flow row and tolerates an unreachable peer set
+    # (transmission is best-effort; the in-process computation is authoritative, design D8).
+    sink = InMemoryTelemetrySink()
+    transport = make_transport("a2a", sink, "job")
+    try:
+        transport.route(
+            AgentMessage(from_agent="planner", to_agent="worker", message_type="dispatch")
+        )
+    finally:
+        close = getattr(transport, "close", None)
+        if close is not None:
+            close()
+    assert len(sink.message_flow) == 1
+    assert (sink.message_flow[0].from_agent, sink.message_flow[0].to_agent) == ("planner", "worker")
 
 
 def test_in_process_run_records_message_flow(tmp_path: Path) -> None:

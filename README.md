@@ -577,9 +577,53 @@ atlaspatch-conduct export-report <output_dir>/telemetry --format json
 ```
 
 `streamlit` ships in the `orchestrator` extra and is imported only by the GUI, so
-`pip install atlas-patch` and the core `atlaspatch` CLI stay GUI-free. The Level-2 true
-inter-agent **message-flow** view is deferred to the distribution phase (it needs the A2A
-wiring); this phase ships Level-1 component-state only.
+`pip install atlas-patch` and the core `atlaspatch` CLI stay GUI-free.
+
+### Distributed agent choreography (A2A)
+
+By default the four logical agents (planner, worker, validator, recovery) run as plain
+in-process calls, and the scheduler is the in-process governor. The run can optionally wire
+those four as **A2A peers** (Agent2Agent protocol) so their handoffs travel over the wire —
+purely for **watchable choreography**: the transport records the same metadata-only
+`message_flow` telemetry either way and never changes what a run computes, so the core is
+identical with or without it. Select it per job config:
+
+```yaml
+# job.yaml
+transport: a2a        # default: in-process
+```
+
+Then start the loopback peer set in one terminal and run the job in another:
+
+```bash
+python -m atlas_conductor.transport.a2a   # terminal 1: serve the four A2A peers on 127.0.0.1
+atlaspatch-conduct run job.yaml           # terminal 2: run with transport: a2a
+```
+
+The `message_flow` family drives the GUI **Level-2 message-flow** view (directed edges
+between agent nodes, pulsing on recency); a run recorded without message flow degrades to the
+Level-1 component-state view. The A2A stack (`a2a-sdk` and its HTTP server dependencies) lives
+in the `orchestrator` extra and is imported only inside `atlas_conductor/transport/a2a.py`, so
+the base `atlaspatch` CLI import graph stays cloud-free; selecting `a2a` without the extra
+fails with a clear "install `atlas-patch[orchestrator]`" error.
+
+### Telemetry backend (local JSONL or BigQuery)
+
+Telemetry defaults to the credential-free local JSONL backend. A run can instead append the
+**same** metadata-only records to **BigQuery** — a cohort-scale, queryable backend — by
+naming a dataset in the job config; switching the backend changes nothing about what any
+agent records:
+
+```yaml
+# job.yaml
+telemetry:
+  backend: bigquery      # default: jsonl
+  dataset: my_dataset    # required for bigquery; one table per record family
+```
+
+`google-cloud-bigquery` is imported only inside `atlas_conductor/telemetry_bigquery.py`
+(behind the `orchestrator` extra), so the base install stays cloud-free. The GUI and the
+report read the local JSONL backend; BigQuery is a write target for cohort-scale analysis.
 
 ## SLURM job scripts
 

@@ -23,7 +23,7 @@ from atlas_conductor.dispatch import ExecutionAdapter, FakeAdapter, RealAdapter
 from atlas_conductor.governance import AuditTrail, Confirmer, PhiSafeSink, default_confirmer
 from atlas_conductor.planning import Planner
 from atlas_conductor.scheduler import RunResult, Scheduler
-from atlas_conductor.telemetry import TelemetrySink
+from atlas_conductor.telemetry import JsonlTelemetrySink, TelemetrySink
 from atlas_conductor.transport import AgentTransport, make_transport
 
 
@@ -34,6 +34,21 @@ def make_adapter(name: str) -> tuple[ExecutionAdapter, str]:
     if name == "real":
         return RealAdapter(), "real"
     raise ValueError(f"unknown adapter {name!r}; choose 'fake' or 'real'")
+
+
+def make_telemetry_sink(config: JobConfig, jsonl_dir: str) -> TelemetrySink:
+    """Resolve the telemetry backend from ``config`` (design D-DIST-4).
+
+    ``jsonl`` (the default) appends to ``jsonl_dir`` and needs no cloud; ``bigquery`` is
+    opt-in and requires the ``orchestrator`` extra (its client is imported behind a guard
+    inside :class:`~atlas_conductor.telemetry_bigquery.BigQueryTelemetrySink`).
+    """
+    if config.telemetry_backend == "bigquery":
+        from atlas_conductor.telemetry_bigquery import BigQueryTelemetrySink
+
+        assert config.telemetry_dataset is not None  # enforced by config validation
+        return BigQueryTelemetrySink(config.telemetry_dataset)
+    return JsonlTelemetrySink(jsonl_dir)
 
 
 def plan_job(config: JobConfig, telemetry: TelemetrySink, audit: AuditTrail | None = None) -> Plan:

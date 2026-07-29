@@ -1,8 +1,9 @@
-"""Import-guard and launch tests for the GUI (tasks 6.4, 5.1).
+"""Import-guard and launch tests for the GUI and the orchestrator backends (tasks 6.4, 6.1).
 
-The core CLI import graph must stay streamlit-free (the GUI runtime lives behind the
-`orchestrator` extra and is imported only inside `gui/app.py`), and the `gui` subcommand
-must launch Streamlit as a subprocess rather than importing it in-process.
+The core CLI import graph must stay free of every heavy `orchestrator`-extra dependency —
+streamlit (GUI), and the phase-4 distribution backends (the A2A SDK, Google ADK, and the
+BigQuery client) — each of which is imported only inside its own guarded module. The `gui`
+subcommand must launch Streamlit as a subprocess rather than importing it in-process.
 """
 
 from __future__ import annotations
@@ -23,6 +24,20 @@ def test_importing_the_core_cli_does_not_import_streamlit() -> None:
         "import atlas_conductor.cli, sys; "
         "assert 'streamlit' not in sys.modules, "
         "'streamlit leaked into the core CLI import graph'"
+    )
+    subprocess.run([sys.executable, "-c", code], check=True)
+
+
+def test_importing_the_core_cli_does_not_import_distribution_backends() -> None:
+    # The A2A transport (a2a-sdk + its HTTP stack), Google ADK, and the BigQuery client are
+    # imported only inside their own guarded modules (design D-DIST-5). Importing the core CLI
+    # must pull in none of them — and, since they may not be installed, a top-level import leak
+    # would also fail this subprocess outright. Run for real to see the whole run façade graph.
+    forbidden = ["a2a", "google.adk", "google.cloud.bigquery", "fastapi", "uvicorn", "streamlit"]
+    code = (
+        "import atlas_conductor.cli, atlas_conductor.run, sys; "
+        f"leaked = [m for m in {forbidden!r} if m in sys.modules]; "
+        "assert not leaked, f'orchestrator backends leaked into the core CLI: {leaked}'"
     )
     subprocess.run([sys.executable, "-c", code], check=True)
 

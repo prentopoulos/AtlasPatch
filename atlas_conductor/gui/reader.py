@@ -15,8 +15,9 @@ from pathlib import Path
 
 from atlas_conductor.telemetry import JsonlTelemetrySink
 
-# The four telemetry families the observability surface renders over.
-FAMILIES = ("jobs", "slide_stage_outcomes", "validation_results", "agent_events")
+# The telemetry families the observability surface renders over. ``message_flow`` (phase 4)
+# feeds the Level-2 message-flow view; older runs simply lack the file and read as empty.
+FAMILIES = ("jobs", "slide_stage_outcomes", "validation_results", "agent_events", "message_flow")
 
 
 class TelemetryReader:
@@ -53,6 +54,9 @@ class TelemetryReader:
 
     def agent_events(self) -> list[dict]:
         return self._read("agent_events")
+
+    def message_flow(self) -> list[dict]:
+        return self._read("message_flow")
 
     def is_empty(self) -> bool:
         """True when no run has been recorded yet (drives the GUI empty state)."""
