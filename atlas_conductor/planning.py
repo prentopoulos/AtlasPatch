@@ -24,7 +24,7 @@ decision trace (design D15, task 8.3) can reconstruct the ordered steps per slid
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from atlas_conductor.agents import Agent
@@ -32,16 +32,20 @@ from atlas_conductor.config import JobConfig
 from atlas_conductor.contracts import (
     COMMAND_FOR_OUTPUT,
     STAGES_FOR_OUTPUT,
+    Classification,
+    Command,
     Decision,
     Plan,
     PlanNode,
     ReasonCode,
+    RecoveryAction,
     RequestedOutput,
     Stage,
     TaskTarget,
     Verdict,
     make_idempotency_key,
 )
+from atlas_conductor.recovery import RecoveryProposal
 from atlas_conductor.telemetry import (
     AgentEventRecord,
     TelemetrySink,
@@ -171,7 +175,7 @@ class Planner:
         plan: Plan,
         config: JobConfig,
         wsi_path: Path,
-        command,
+        command: Command,
         stages: tuple[Stage, ...],
         blocked: tuple[ReasonCode, str] | None,
     ) -> None:
@@ -271,6 +275,66 @@ class Planner:
 
         node.decision = Decision.RUN
         node.reason = verdict.reason
+
+    def apply_recovery(self, plan: Plan, node: PlanNode, proposal: RecoveryProposal) -> None:
+        """Integrate a recovery proposal into the plan (task 4.4; design D6).
+
+        The planner is the single writer of plan state: it records the mutation, updates
+        the node's tuning/decision, and - for terminal (quarantine/block) actions - marks
+        every downstream dependent ``dependency-blocked`` so it is never scheduled.
+        """
+        node.mutation_history = (*node.mutation_history, proposal.action.value)
+        action = proposal.action
+        if action in (RecoveryAction.RETRY_AS_IS, RecoveryAction.RETRY_WITH_MUTATION):
+            if proposal.tuning is not None:
+                node.tuning = proposal.tuning
+            node.decision = Decision.RUN
+            node.reason = None
+            node.detail = proposal.detail
+        elif action is RecoveryAction.FORCE_REPROCESS:
+            node.tuning = replace(node.tuning, force=True)
+            node.decision = Decision.RUN
+            node.reason = None
+            node.detail = proposal.detail
+        else:  # QUARANTINE_ITEM / BLOCK_ITEM / BLOCK_JOB
+            node.decision = Decision.BLOCKED
+            node.reason = self._block_reason(action, proposal.classification)
+            node.detail = proposal.detail
+            self.mark_dependents_blocked(plan, node)
+
+        self._record_event(
+            "recover",
+            slide_stem=node.slide_stem,
+            reason=node.reason,
+            detail=f"{proposal.classification.value}/{action.value}: {proposal.detail}",
+        )
+
+    @staticmethod
+    def _block_reason(action: RecoveryAction, classification: Classification) -> ReasonCode:
+        if action is RecoveryAction.QUARANTINE_ITEM:
+            return ReasonCode.ATTEMPTS_EXHAUSTED
+        return {
+            Classification.PRECONDITION_BLOCK: ReasonCode.PRECONDITION_BLOCK,
+            Classification.INPUT_DATA: ReasonCode.UNREADABLE_INPUT,
+            Classification.DEPENDENCY_BLOCKED: ReasonCode.DEPENDENCY_BLOCKED,
+        }.get(classification, ReasonCode.UNKNOWN_FAILURE)
+
+    def mark_dependents_blocked(self, plan: Plan, node: PlanNode) -> None:
+        """Mark every node transitively depending on ``node`` as dependency-blocked."""
+        blocked_ids = {node.node_id}
+        # Iterate to a fixpoint so transitive dependents are all caught.
+        changed = True
+        while changed:
+            changed = False
+            for candidate in plan.nodes:
+                if candidate.decision is Decision.BLOCKED:
+                    continue
+                if any(dep in blocked_ids for dep in candidate.dependencies):
+                    candidate.decision = Decision.BLOCKED
+                    candidate.reason = ReasonCode.DEPENDENCY_BLOCKED
+                    candidate.detail = f"upstream {node.stage.value} not satisfied"
+                    blocked_ids.add(candidate.node_id)
+                    changed = True
 
     def _slide_decision_summary(self, plan: Plan, stem: str) -> str:
         parts = [f"{n.stage.value}={n.decision.value}" for n in plan.nodes if n.slide_stem == stem]
