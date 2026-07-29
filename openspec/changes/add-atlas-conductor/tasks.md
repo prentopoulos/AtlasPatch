@@ -30,7 +30,7 @@ hardens their integrity, so it is not a prerequisite for phase 1.
 
 - [x] 2.1 Define the Plan and plan-node types (stage, targets, dependencies, decision, reason, attempt budget).
 - [x] 2.2 Define the adapter-agnostic Task type (stage, targets + expected HDF5 paths, geometry, encoders, tuning, attempt/mutation history, dependencies, idempotency key) — no argv, no fixture directive.
-- [ ] 2.3 Define the raw Outcome, the per-slide Verdict, and the Classification/plan-delta types, including the labeled `(signature, classification, action, resolved?)` fields so telemetry is a recovery dataset (D14).
+- [x] 2.3 Define the raw Outcome, the per-slide Verdict, and the Classification/plan-delta types, including the labeled `(signature, classification, action, resolved?)` fields so telemetry is a recovery dataset (D14).
 - [x] 2.4 Define the YAML job-config schema and its loader/validator.
 
 ## 3. Output validation (build first — reused by the planner)
@@ -44,7 +44,7 @@ hardens their integrity, so it is not a prerequisite for phase 1.
 - [x] 4.1 Implement stage-DAG construction from a job config (segment → embed) and the stage→command dispatch mapping.
 - [x] 4.2 Implement state reconciliation: per-slide `skip`/`run`/`reuse`/`block` decisions from the validity predicate and requested output (branch-on-output).
 - [x] 4.3 Implement plan-time geometry-conflict blocking with actionable messages.
-- [ ] 4.4 Implement plan-delta integration so the planner is the single writer of plan state (including `mark_dependents_blocked`).
+- [x] 4.4 Implement plan-delta integration so the planner is the single writer of plan state (including `mark_dependents_blocked`).
 - [x] 4.5 (Optional, leaning yes) Implement `--dry-run` that prints the reconciled plan without dispatch.
 - [x] 4.6 Implement a plan-time input-admissibility gate (D16): reject empty cohorts, directories with no WSI-extension files, and unreadable/zero-byte inputs with actionable blocks and reason codes (`empty-cohort`, `no-wsi-files`, `unreadable-input`); keep checks shallow (extension/existence/size/optional magic bytes) — no slide decode.
 
@@ -52,15 +52,15 @@ hardens their integrity, so it is not a prerequisite for phase 1.
 
 - [x] 5.1 Define the single `ExecutionAdapter` interface (`execute(task) -> Outcome`).
 - [x] 5.2 Implement the real adapter: build CLI argv from a task, run AtlasPatch as a subprocess, capture exit code, stdout/stderr tails, timing, produced paths.
-- [ ] 5.3 Implement the fake adapter: write real canned HDF5s to expected paths; inject execution failures (CUDA-OOM, missing-token block) and structural-invalid outputs (row mismatch, NaNs, unopenable).
+- [x] 5.3 Implement the fake adapter: write real canned HDF5s to expected paths; inject execution failures (CUDA-OOM, missing-token block) and structural-invalid outputs (row mismatch, NaNs, unopenable).
 - [x] 5.4 Implement the worker: forward raw unclassified outcomes only.
-- [ ] 5.5 Implement the scheduler control loop: cohort-directory first pass, per-file recovery retries, per-slide filesystem accounting, concurrency governance.
+- [x] 5.5 Implement the scheduler control loop: cohort-directory first pass, per-file recovery retries, per-slide filesystem accounting, concurrency governance.
 
 ## 6. Recovery
 
-- [ ] 6.1 Implement two-source failure classification into the taxonomy (`resource-transient`, `precondition-block`, `input-data`, `structural-invalid`, `dependency-blocked`, `unknown`), including stderr-signature matching for the real adapter.
-- [ ] 6.2 Implement the bounded, monotone recovery action set restricted to CLI tuning knobs + `--force` + quarantine/block, with per-item attempt budgets.
-- [ ] 6.3 Implement `unknown → block` (never blind-retry) and downstream dependency-blocking proposals.
+- [x] 6.1 Implement two-source failure classification into the taxonomy (`resource-transient`, `precondition-block`, `input-data`, `structural-invalid`, `dependency-blocked`, `unknown`), including stderr-signature matching for the real adapter.
+- [x] 6.2 Implement the bounded, monotone recovery action set restricted to CLI tuning knobs + `--force` + quarantine/block, with per-item attempt budgets.
+- [x] 6.3 Implement `unknown → block` (never blind-retry) and downstream dependency-blocking proposals.
 
 > The HITL confirmation gate on `force_reprocess`/`block_job`/`quarantine_item` (D13) is **phase 2** (`add-conductor-governance`). Phase 1 recovery proposes these actions; phase 2 gates the irreversible ones behind human confirmation.
 
@@ -80,11 +80,11 @@ hardens their integrity, so it is not a prerequisite for phase 1.
 
 ## 9. Tests, CI, and docs
 
-- [ ] 9.1 End-to-end no-GPU test: full planning → dispatch → validation → recovery → telemetry loop against the fake adapter, asserting the stage-granular recovery behavior (segment kept, only embed retried on injected OOM).
+- [x] 9.1 End-to-end no-GPU test: full planning → dispatch → validation → recovery → telemetry loop against the fake adapter, asserting the stage-granular recovery behavior (segment kept, only embed retried on injected OOM).
 - [x] 9.2 Tests for cohort-state reconciliation (the state × requested-output decision table) and for geometry-conflict blocking.
 - [x] 9.7 Tests for the input-admissibility gate (D16): `empty-cohort`, `no-wsi-files`, and `unreadable-input` each block before dispatch with no slide decode.
 - [x] 9.8 Test that the report/`--dry-run` decision trace (D15) surfaces the ordered per-slide decisions from the typed telemetry records and carries operational metadata only (no pixels/PHI).
 - [x] 9.3 Add the no-GPU orchestrator loop to CI.
-- [ ] 9.4 Write the orchestration-layer usage guide (YAML config, running with the fake adapter, reading the report) and add a README pointer.
+- [x] 9.4 Write the orchestration-layer usage guide (YAML config, running with the fake adapter, reading the report) and add a README pointer.
 
 > The governance CI proofs — PHI-gate rejection and HITL attended/unattended behavior — are **phase 2**, landing with the guardrails they verify.

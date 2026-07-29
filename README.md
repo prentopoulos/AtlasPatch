@@ -53,6 +53,7 @@
     - [Patch feature matrices](#patch-feature-matrices)
     - [Slide embeddings](#slide-embeddings)
     - [Patient embeddings](#patient-embeddings)
+- [Orchestration at cohort scale](#orchestration-at-cohort-scale)
 - [SLURM job scripts](#slurm-job-scripts)
 - [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq)
 - [Feedback](#feedback)
@@ -529,6 +530,23 @@ import h5py
 with h5py.File("output/patient_features/moozy/case-001.h5", "r") as f:
     case_embedding = f["features"][...]
 ```
+
+## Orchestration at cohort scale
+
+The optional `atlas_conductor` layer runs the pipeline reliably across a whole cohort —
+planning which slides to (re)process, dispatching work, validating the HDF5 outputs,
+recovering from failures with bounded retries, and recording metadata-only telemetry —
+without modifying the ML pipeline. Install it with the `orchestrator` extra and drive it
+from a YAML job config:
+
+```bash
+pip install "atlas-patch[orchestrator]"
+atlaspatch-conduct run job.yaml --dry-run   # preview the plan; drop --dry-run to execute
+```
+
+See the **[orchestration usage guide](docs/orchestration.md)** for the job-config schema,
+running with the fake (no-GPU) or real adapter, reading the report and decision trace, and
+the recovery and telemetry model.
 
 ## SLURM job scripts
 
