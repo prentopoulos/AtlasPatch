@@ -21,6 +21,7 @@ from atlas_conductor.config import JobConfig
 from atlas_conductor.contracts import Plan
 from atlas_conductor.dispatch import ExecutionAdapter, FakeAdapter, RealAdapter
 from atlas_conductor.governance import AuditTrail, Confirmer, PhiSafeSink, default_confirmer
+from atlas_conductor.lineage.base import LineageBackend
 from atlas_conductor.planning import Planner
 from atlas_conductor.scheduler import RunResult, Scheduler
 from atlas_conductor.telemetry import JsonlTelemetrySink, TelemetrySink
@@ -49,6 +50,24 @@ def make_telemetry_sink(config: JobConfig, jsonl_dir: str) -> TelemetrySink:
         assert config.telemetry_dataset is not None  # enforced by config validation
         return BigQueryTelemetrySink(config.telemetry_dataset)
     return JsonlTelemetrySink(jsonl_dir)
+
+
+def make_lineage_backend(name: str) -> LineageBackend:
+    """Resolve a lineage backend by name (design D-LIN-1), mirroring ``make_adapter``.
+
+    ``manifest`` (the default) is stdlib-only and credential-free; ``dvc`` is opt-in and needs
+    the ``orchestrator`` extra — its module (and therefore ``dvc``) is imported behind this
+    guard, never at import time, so the core CLI import graph stays DVC-free.
+    """
+    if name == "manifest":
+        from atlas_conductor.lineage.manifest import ManifestLineage
+
+        return ManifestLineage()
+    if name == "dvc":
+        from atlas_conductor.lineage.dvc_backend import DvcLineage
+
+        return DvcLineage()
+    raise ValueError(f"unknown lineage backend {name!r}; choose 'manifest' or 'dvc'")
 
 
 def plan_job(config: JobConfig, telemetry: TelemetrySink, audit: AuditTrail | None = None) -> Plan:
@@ -98,4 +117,21 @@ def run_job(
         confirmer=confirmer,
         transport=transport,
     )
-    return scheduler.run(plan)
+    result = scheduler.run(plan)
+    _record_lineage(config, plan)
+    return result
+
+
+def _record_lineage(config: JobConfig, plan: Plan) -> None:
+    """Record lineage over the finished run's outputs when the config opts in (design D-LIN-7).
+
+    Invoked strictly *after* the scheduler returns and writes only a new sibling artifact, so
+    enabling it cannot change any plan/dispatch/validation/recovery/telemetry result. Off (a
+    no-op) unless ``config.lineage_backend`` is set.
+    """
+    if config.lineage_backend is None:
+        return
+    from atlas_conductor.lineage.resolve import from_plan
+
+    backend = make_lineage_backend(config.lineage_backend)
+    backend.record(from_plan(plan, config))

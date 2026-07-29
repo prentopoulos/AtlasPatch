@@ -13,9 +13,9 @@
 
 ## 3. Backend selection and run wiring (D-LIN-7)
 
-- [ ] 3.1 Add `make_lineage_backend(name)` in `run.py` (`manifest` default, `dvc` opt-in) mirroring `make_adapter`/`make_telemetry_sink`.
-- [ ] 3.2 Parse an optional `lineage:` block in `config.py` (`backend: manifest|dvc`, default off) with validation errors matching the existing `_parse_telemetry` style; unit-test parse + rejection of an unknown backend.
-- [ ] 3.3 Invoke lineage in `run_job` **after** the scheduler returns when the config enables it; assert via test that enabling it changes no plan/dispatch/validation/recovery/telemetry output (byte-identical run).
+- [x] 3.1 Add `make_lineage_backend(name)` in `run.py` (`manifest` default, `dvc` opt-in) mirroring `make_adapter`/`make_telemetry_sink`.
+- [x] 3.2 Parse an optional `lineage:` block in `config.py` (`backend: manifest|dvc`, default off) with validation errors matching the existing `_parse_telemetry` style; unit-test parse + rejection of an unknown backend.
+- [x] 3.3 Invoke lineage in `run_job` **after** the scheduler returns when the config enables it; assert via test that enabling it changes no plan/dispatch/validation/recovery/telemetry output (byte-identical run).
 
 ## 4. CLI subcommand
 
