@@ -12,7 +12,10 @@ trace is sourced from the append-only telemetry records (design D15, task 8.3).
 
 from __future__ import annotations
 
+from typing import Any
+
 from atlas_conductor.contracts import STAGES_FOR_OUTPUT, Decision, Plan, SlideOutcome
+from atlas_conductor.governance.phi import pseudonymize_stem
 from atlas_conductor.scheduler import RunResult
 from atlas_conductor.telemetry import TelemetrySink
 from atlas_conductor.trace import render_slide_trace, slide_traces
@@ -23,6 +26,20 @@ _ORDER = (
     SlideOutcome.QUARANTINED,
     SlideOutcome.BLOCKED,
 )
+
+
+def _trace_for(
+    traces: dict[str, list[dict[str, Any]]], stem: str, job_id: str
+) -> list[dict[str, Any]]:
+    """Resolve a slide's trace by its raw stem or its pseudonym (design D12/D19).
+
+    The report renders raw stems from the in-memory result/plan for operator readability,
+    but the persisted telemetry keys traces by the PHI-free pseudonym. Try the raw stem
+    first (ungated telemetry) then the per-run pseudonym (gated telemetry).
+    """
+    if stem in traces:
+        return traces[stem]
+    return traces.get(pseudonymize_stem(stem, job_id), [])
 
 
 def build_report(
@@ -54,8 +71,10 @@ def build_report(
                 line += f" - {slide.detail}"
         lines.append(line)
         show = trace == "all" or (trace == "failures" and slide.outcome is not SlideOutcome.VALID)
-        if show and slide.slide_stem in traces:
-            lines.extend(render_slide_trace(traces[slide.slide_stem]))
+        if show:
+            slide_trace = _trace_for(traces, slide.slide_stem, result.job_id)
+            if slide_trace:
+                lines.extend(render_slide_trace(slide_trace))
 
     lines.append("-" * 60)
     counts = "  ".join(f"{outcome.value}={result.count(outcome)}" for outcome in _ORDER)
@@ -97,8 +116,9 @@ def build_dry_run_report(plan: Plan, telemetry: TelemetrySink | None = None) -> 
             if node.detail:
                 line += f" - {node.detail}"
         lines.append(line)
-        if node.slide_stem in traces:
-            lines.extend(render_slide_trace(traces[node.slide_stem]))
+        node_trace = _trace_for(traces, node.slide_stem, plan.job_id)
+        if node_trace:
+            lines.extend(render_slide_trace(node_trace))
 
     lines.append("-" * 60)
     summary = "  ".join(f"{k}={v}" for k, v in counts.items() if v)
