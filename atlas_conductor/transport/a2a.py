@@ -1,69 +1,60 @@
-"""The A2A agent transport — the opt-in, over-the-wire choreography (design D-DIST-5/6).
+"""The A2A agent transport — the opt-in, over-the-wire choreography on Google ADK (D-DIST-5/6).
 
 This module wires the four logical agents (planner, worker, validator, recovery) as
-Agent2Agent (A2A) peers on Google's protocol SDK. It is imported **only** through
+**Google ADK** agents exposed as **Agent2Agent (A2A)** peers. It is imported **only** through
 ``make_transport("a2a")`` and never from the core CLI, the run façade, or the in-process
 transport, so the base ``atlaspatch`` import graph stays cloud-free (design D-DIST-5). The
-heavy dependencies (``a2a-sdk`` and its ``httpx`` / ``uvicorn`` / ``fastapi`` stack) live in
-the ``atlas-patch[orchestrator]`` extra; importing this module without them raises
+heavy dependencies (``google-adk`` and its A2A/HTTP stack) live in the
+``atlas-patch[orchestrator]`` extra; importing this module without them raises
 ``ModuleNotFoundError``, which ``make_transport`` turns into a clean
 :class:`~atlas_conductor.transport.TransportUnavailableError`.
 
-Why it exists (design D8): the deterministic core does **not** need A2A for correctness —
-the in-process transport already produces identical outputs. The A2A transport earns its
-weight as *watchable choreography*: it records the same ``message_flow`` family as the
-in-process transport **and** transmits each handoff to the target agent's peer server, so the
-GUI Level-2 view renders genuine over-the-wire messages. The scheduler remains the in-process
-governor and authoritative computation (design D-DIST-6); the peers acknowledge the handoffs.
+Design (D8): the four agents run as ADK agents exposed over A2A via ADK's ``to_a2a()``, and
+the transport reaches them with ADK's ``RemoteA2aAgent`` client. Crucially each peer is a
+**custom deterministic** ADK ``BaseAgent`` — *not* an ``LlmAgent`` — so it performs no model
+inference: the conductor's deterministic-core invariant (no clinical/agentic reasoning) holds
+even when the agents run as ADK A2A peers. The scheduler remains the in-process governor and
+authoritative computation (design D-DIST-6); a peer's only job is to *receive* a handoff,
+making the choreography genuinely over-the-wire, and acknowledge it. The transport records the
+same metadata-only ``message_flow`` family as the in-process transport, so the GUI Level-2
+view renders identical rows whether or not a socket was involved.
 
 Scope (design Non-Goals): a localhost/loopback peer set sufficient to demonstrate real
 messages — no multi-host topology, service discovery, or auth hardening. This path is
 exercised by an opt-in integration test that skips when the extra is not installed
 (task 6.2); the CI-green parity proof uses a stubbed transport instead (task 3.5).
+
+ADK's A2A support is marked *experimental* by Google (functional, subject to change); its
+``[EXPERIMENTAL]`` warnings are silenced below since this module opts into that surface.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-import uuid
-from collections.abc import Callable, Mapping
+import warnings
+from collections.abc import AsyncGenerator, Callable, Mapping
 
-import httpx
 import uvicorn
-from a2a.client import ClientConfig, ClientFactory
-from a2a.client.client_factory import TransportProtocol
-from a2a.server.agent_execution.agent_executor import AgentExecutor
-from a2a.server.agent_execution.context import RequestContext
-from a2a.server.events.event_queue import EventQueue
-from a2a.server.request_handlers import DefaultRequestHandler
-from a2a.server.routes import (
-    add_a2a_routes_to_fastapi,
-    create_agent_card_routes,
-    create_rest_routes,
-)
-from a2a.server.tasks.inmemory_task_store import InMemoryTaskStore
-from a2a.server.tasks.task_updater import TaskUpdater
-from a2a.types import (
-    AgentCapabilities,
-    AgentCard,
-    AgentInterface,
-    AgentSkill,
-    Message,
-    Part,
-    Role,
-    SendMessageConfiguration,
-    SendMessageRequest,
-)
-from fastapi import FastAPI
+from google.adk.a2a.utils.agent_to_a2a import to_a2a
+from google.adk.agents import BaseAgent
+from google.adk.agents.invocation_context import InvocationContext
+from google.adk.agents.remote_a2a_agent import AGENT_CARD_WELL_KNOWN_PATH, RemoteA2aAgent
+from google.adk.events import Event
+from google.adk.runners import InMemoryRunner
+from google.genai import types as genai_types
 
 from atlas_conductor.agents import Agent
 from atlas_conductor.telemetry import TelemetrySink
 from atlas_conductor.transport import AgentMessage, AgentTransport
 
+# ADK's A2A implementation is functional but flagged experimental; silence the noise on the
+# opt-in path (this filter only takes effect once this module is imported via make_transport).
+warnings.filterwarnings("ignore", message=r".*\[EXPERIMENTAL\].*")
+
 logger = logging.getLogger(__name__)
 
-# The four logical agents that run as A2A peers. The scheduler stays in-process (design D8).
+# The four logical agents that run as ADK/A2A peers. The scheduler stays in-process (D8).
 PEER_AGENTS: tuple[str, ...] = (
     Agent.PLANNER.value,
     Agent.WORKER.value,
@@ -75,7 +66,12 @@ PEER_AGENTS: tuple[str, ...] = (
 _BASE_PORT = 41240
 AGENT_PORTS: dict[str, int] = {agent: _BASE_PORT + i for i, agent in enumerate(PEER_AGENTS)}
 
-_REST_PREFIX = "/a2a/rest"
+# Optional observability hook: called on the server with (agent, received_text) each time a
+# peer receives a handoff. Keyed by agent name in a module registry because an ADK ``BaseAgent``
+# is a pydantic model that does not take arbitrary instance attributes. Used by the loopback
+# runner to log receipts and by the integration test to prove genuine over-the-wire delivery.
+OnReceive = Callable[[str, str], None]
+_RECEIVE_HOOKS: dict[str, OnReceive] = {}
 
 
 def agent_url(agent: str, host: str = "127.0.0.1") -> str:
@@ -83,121 +79,70 @@ def agent_url(agent: str, host: str = "127.0.0.1") -> str:
     return f"http://{host}:{AGENT_PORTS[agent]}"
 
 
-def build_agent_card(agent: str, host: str = "127.0.0.1") -> AgentCard:
-    """The A2A AgentCard advertised by (and used to reach) one peer agent.
+class _HandoffAgent(BaseAgent):
+    """A deterministic ADK agent (custom ``BaseAgent``, no LLM) that acknowledges a handoff.
 
-    Built deterministically from the agent name and host so both the server and the client
-    describe the same peer without a discovery round-trip (Non-Goal: no service discovery).
-    """
-    base = agent_url(agent, host)
-    return AgentCard(
-        name=f"atlas-conductor-{agent}",
-        description=f"AtlasPatch Conductor {agent} agent (A2A peer).",
-        version="1.0.0",
-        capabilities=AgentCapabilities(streaming=False, push_notifications=False),
-        default_input_modes=["text"],
-        default_output_modes=["text"],
-        skills=[
-            AgentSkill(
-                id=f"{agent}-handoff",
-                name=f"{agent} handoff",
-                description=f"Receive an inter-agent handoff addressed to the {agent} agent.",
-                tags=["conductor", "choreography"],
-            )
-        ],
-        supported_interfaces=[
-            AgentInterface(
-                protocol_binding="HTTP+JSON",
-                protocol_version="1.0",
-                url=f"{base}{_REST_PREFIX}",
-            )
-        ],
-    )
-
-
-# Optional observability hook: called on the server with (agent, received_text) each time a
-# peer receives a handoff. Used by the loopback runner to log receipts and by the integration
-# test to prove genuine over-the-wire delivery.
-OnReceive = Callable[[str, str], None]
-
-
-class _HandoffExecutor(AgentExecutor):
-    """A peer agent's server-side executor: acknowledge a received handoff.
-
-    The scheduler is authoritative (design D-DIST-6), so a peer's job is only to *receive*
-    the handoff message — making the choreography genuinely over-the-wire — and complete. It
-    performs no pipeline work and reads no slide data.
+    Subclassing ``BaseAgent`` rather than ``LlmAgent`` means the peer does no model inference,
+    so the deterministic-core invariant holds while the agents run as ADK A2A peers (design
+    D8/D-DIST-6). It fires the optional receive hook (proving the handoff arrived) and yields a
+    single acknowledgement event.
     """
 
-    def __init__(self, agent: str, on_receive: OnReceive | None = None) -> None:
-        self._agent = agent
-        self._on_receive = on_receive
-
-    async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        task_id = context.task_id
-        context_id = context.context_id
-        if not task_id or not context_id:
-            return
-        received = context.get_user_input()
-        logger.info("[%s] received handoff: %s", self._agent, received)
-        if self._on_receive is not None:
-            self._on_receive(self._agent, received)
-        updater = TaskUpdater(event_queue=event_queue, task_id=task_id, context_id=context_id)
-        await updater.add_artifact(
-            parts=[Part(text=f"{self._agent} acknowledged handoff")],
-            name="ack",
-            last_chunk=True,
+    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        hook = _RECEIVE_HOOKS.get(self.name)
+        if hook is not None:
+            hook(self.name, _incoming_text(ctx))
+        yield Event(
+            author=self.name,
+            content=genai_types.Content(
+                role="model", parts=[genai_types.Part(text=f"{self.name} acknowledged handoff")]
+            ),
         )
-        await updater.complete()
-
-    async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
-        return
 
 
-def create_agent_app(
-    agent: str, host: str = "127.0.0.1", on_receive: OnReceive | None = None
-) -> FastAPI:
-    """Build the FastAPI app exposing one peer agent over A2A HTTP+JSON."""
-    card = build_agent_card(agent, host)
-    handler = DefaultRequestHandler(
-        agent_executor=_HandoffExecutor(agent, on_receive),
-        task_store=InMemoryTaskStore(),
-        agent_card=card,
-    )
-    app = FastAPI()
-    add_a2a_routes_to_fastapi(
-        app,
-        agent_card_routes=create_agent_card_routes(agent_card=card),
-        rest_routes=create_rest_routes(request_handler=handler, path_prefix=_REST_PREFIX),
-    )
-    return app
+def _incoming_text(ctx: InvocationContext) -> str:
+    """Best-effort extraction of the received handoff text (observability only)."""
+    try:
+        user_content = getattr(ctx, "user_content", None)
+        if user_content is not None and user_content.parts:
+            return user_content.parts[0].text or ""
+    except Exception:  # pragma: no cover - the hook must never break the peer
+        pass
+    return ""
 
 
-def build_servers(
-    host: str = "127.0.0.1", on_receive: OnReceive | None = None
-) -> list[uvicorn.Server]:
+def build_servers(host: str = "127.0.0.1", on_receive: OnReceive | None = None) -> list:
     """One configured (unstarted) ``uvicorn.Server`` per peer agent on its loopback port.
 
-    Shared by :func:`serve_peer_set` (the demo runner) and the loopback integration test so
-    both stand up the peers the same way.
+    Each server hosts an ADK ``_HandoffAgent`` exposed over A2A via ADK's ``to_a2a()``. Shared
+    by :func:`serve_peer_set` (the demo runner) and the loopback integration test so both stand
+    up the peers the same way.
     """
-    return [
-        uvicorn.Server(
-            uvicorn.Config(
-                create_agent_app(agent, host, on_receive), host=host, port=port, log_level="warning"
-            )
+    _RECEIVE_HOOKS.clear()
+    servers = []
+    for agent, port in AGENT_PORTS.items():
+        if on_receive is not None:
+            _RECEIVE_HOOKS[agent] = on_receive
+        app = to_a2a(
+            _HandoffAgent(
+                name=agent, description=f"AtlasPatch Conductor {agent} agent (A2A peer)."
+            ),
+            host=host,
+            port=port,
         )
-        for agent, port in AGENT_PORTS.items()
-    ]
+        servers.append(
+            uvicorn.Server(uvicorn.Config(app, host=host, port=port, log_level="warning"))
+        )
+    return servers
 
 
 class A2ATransport(AgentTransport):
     """Route handoffs over A2A: record the ``message_flow`` row *and* transmit to the peer.
 
     Recording is inherited from :class:`AgentTransport`; only ``_deliver`` is overridden to
-    send the message to the target agent's peer server. Transmission is best-effort — the
-    in-process computation is authoritative (design D8), so a peer that is unreachable logs a
-    warning and the run proceeds, still with the flow recorded.
+    send the handoff to the target agent's ADK peer via a reused ``RemoteA2aAgent`` runner.
+    Transmission is best-effort — the in-process computation is authoritative (design D8), so a
+    peer that is unreachable logs a warning and the run proceeds, still with the flow recorded.
     """
 
     name = "a2a"
@@ -215,53 +160,56 @@ class A2ATransport(AgentTransport):
             dict(peers) if peers is not None else {a: agent_url(a, host) for a in PEER_AGENTS}
         )
         self._loop = asyncio.new_event_loop()
-        self._httpx = httpx.AsyncClient()
-        self._factory = ClientFactory(
-            config=ClientConfig(
-                httpx_client=self._httpx,
-                supported_protocol_bindings=[TransportProtocol.HTTP_JSON],
+        # One ADK RemoteA2aAgent + in-memory runner per peer, reused across the run.
+        self._runners: dict[str, InMemoryRunner] = {}
+        for agent, url in self._peers.items():
+            remote = RemoteA2aAgent(
+                name=f"peer_{agent}",
+                description=f"Remote {agent} A2A peer.",
+                agent_card=f"{url}{AGENT_CARD_WELL_KNOWN_PATH}",
+                use_legacy=False,
             )
-        )
+            self._runners[agent] = InMemoryRunner(agent=remote, app_name=f"conductor-{agent}")
 
     def _deliver(self, message: AgentMessage) -> None:
-        if message.to_agent not in self._peers:
+        runner = self._runners.get(message.to_agent)
+        if runner is None:
             return  # e.g. the scheduler is not a peer; nothing to transmit
         try:
-            self._loop.run_until_complete(self._send(message))
+            self._loop.run_until_complete(self._send(runner, message))
         except Exception as exc:  # pragma: no cover - network/peer errors must not fail a run
             logger.warning("A2A transmit to %s failed: %s", message.to_agent, exc)
 
-    async def _send(self, message: AgentMessage) -> None:
-        card = build_agent_card(message.to_agent, self._host)
-        client = self._factory.create(card)
-        text = (
-            f"{message.message_type} handoff {message.from_agent}->{message.to_agent}"
-            + (f" slide={message.slide_stem}" if message.slide_stem else "")
-            + (f" stage={message.stage}" if message.stage else "")
+    async def _send(self, runner: InMemoryRunner, message: AgentMessage) -> None:
+        session = await runner.session_service.create_session(
+            app_name=runner.app_name, user_id="conductor"
         )
-        request = SendMessageRequest(
-            message=Message(
-                role=Role.ROLE_USER,
-                message_id=uuid.uuid4().hex,
-                parts=[Part(text=text)],
-            ),
-            configuration=SendMessageConfiguration(),
+        content = genai_types.Content(
+            role="user", parts=[genai_types.Part(text=_handoff_text(message))]
         )
-        async for _event in client.send_message(request=request):
+        async for _event in runner.run_async(
+            user_id="conductor", session_id=session.id, new_message=content
+        ):
             pass  # drain the peer's acknowledgement stream
 
     def close(self) -> None:
-        """Release the httpx client and event loop (call after a run)."""
-        try:
-            self._loop.run_until_complete(self._httpx.aclose())
-        finally:
-            self._loop.close()
+        """Release the transport's event loop (call after a run)."""
+        self._loop.close()
+
+
+def _handoff_text(message: AgentMessage) -> str:
+    text = f"{message.message_type} handoff {message.from_agent}->{message.to_agent}"
+    if message.slide_stem:
+        text += f" slide={message.slide_stem}"
+    if message.stage:
+        text += f" stage={message.stage}"
+    return text
 
 
 async def serve_peer_set(host: str = "127.0.0.1", on_receive: OnReceive | None = None) -> None:
-    """Start every peer agent's A2A server on loopback and serve until interrupted."""
+    """Start every peer agent's ADK/A2A server on loopback and serve until interrupted."""
     servers = build_servers(host, on_receive)
-    logger.info("serving %d A2A peers on %s: %s", len(servers), host, AGENT_PORTS)
+    logger.info("serving %d ADK/A2A peers on %s: %s", len(servers), host, AGENT_PORTS)
     await asyncio.gather(*(server.serve() for server in servers))
 
 
