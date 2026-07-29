@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  specs:
+    # Validate the OpenSpec change/spec artifacts (WORKFLOW.md step 6, `specs` job).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install OpenSpec CLI
+        run: npm install -g openspec
+      - name: Validate all specs and changes (strict)
+        run: openspec validate --all --strict
+
+  app:
+    # Lint and run the no-GPU orchestrator loop against the fake adapter (task 9.3).
+    # atlas_conductor imports no atlas_patch internals and needs only h5py + numpy +
+    # click + PyYAML, so this job installs the conductor's runtime surface and the
+    # package (without the heavy upstream ML deps, which the fake-adapter loop never
+    # exercises). The deterministic core running with no GPU and no slides is the point.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install conductor runtime + dev tooling
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "h5py>=3.8.0" "numpy>=1.21.0" "click>=8.0.0" \
+            "pyyaml>=6.0" "pytest>=7.0.0" "ruff>=0.1.0"
+      - name: Install atlas_conductor (register the console entry point)
+        run: python -m pip install -e . --no-deps
+      - name: Lint
+        run: ruff check atlas_conductor tests
+      - name: Smoke-test the console entry point
+        run: atlaspatch-conduct --version
+      - name: Run the no-GPU orchestrator test suite
+        run: pytest tests/conductor -q
