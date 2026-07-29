@@ -36,7 +36,7 @@ def choreography_state(events: list[dict[str, Any]]) -> ChoreographyState:
     slide (e.g. planning or run completion).
     """
     if not events:
-        return ChoreographyState(None, {agent: False for agent in AGENTS}, None, None, None)
+        return ChoreographyState(None, dict.fromkeys(AGENTS, False), None, None, None)
 
     last = events[-1]
     active = last.get("agent")
