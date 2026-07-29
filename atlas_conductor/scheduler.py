@@ -40,6 +40,9 @@ from atlas_conductor.contracts import (
     make_idempotency_key,
 )
 from atlas_conductor.dispatch import ExecutionAdapter, Worker
+from atlas_conductor.governance.audit import AuditTrail
+from atlas_conductor.governance.hitl import AutoApproveConfirmer, Confirmer, requires_confirmation
+from atlas_conductor.governance.phi import pseudonymize_stem, safe_harbor_findings
 from atlas_conductor.planning import Planner
 from atlas_conductor.recovery import RecoveryProposal, classify, propose
 from atlas_conductor.telemetry import (
@@ -90,11 +93,18 @@ class Scheduler:
         adapter: ExecutionAdapter,
         telemetry: TelemetrySink,
         adapter_name: str = "fake",
+        audit: AuditTrail | None = None,
+        confirmer: Confirmer | None = None,
     ) -> None:
         self._config = config
         self._adapter = adapter
         self._telemetry = telemetry
         self._adapter_name = adapter_name
+        self._audit = audit
+        # The HITL gate is installed at the run façade (design D21); a bare scheduler
+        # defaults to auto-approve so its unit tests stay ungated. ``run_job`` passes the
+        # real confirmer selected from ``JobConfig.unattended``.
+        self._confirmer: Confirmer = confirmer or AutoApproveConfirmer()
         self._worker = Worker(adapter, telemetry, "")  # rebound per run in run()
 
     def run(self, plan: Plan) -> RunResult:
@@ -155,6 +165,9 @@ class Scheduler:
                     f"attempt={node.attempts}",
                 )
             )
+            self._audit_action(
+                plan, "dispatch", node, f"first-pass {node.command.value} attempt={node.attempts}"
+            )
         return self._worker.execute(task)
 
     # -- recovery + accounting ---------------------------------------------------
@@ -201,7 +214,23 @@ class Scheduler:
                 classification, signature = classify(last_outcome, verdict)
                 proposal = propose(classification, signature, node, last_outcome)
                 label = last_outcome.injected_label if last_outcome else None
+
+                # HITL gate (design D13/D21): an irreversible/expensive action is held for
+                # human confirmation before the planner applies it, unless waived. A held
+                # action is not applied; the slide's held state is recorded, not lost.
+                if requires_confirmation(proposal.action) and not self._confirm(
+                    plan, node, proposal
+                ):
+                    self._record_recovery_outcome(plan, node, proposal, label, resolved=False)
+                    return self._held_result(plan, node, proposal)
+
                 self._planner.apply_recovery(plan, node, proposal)
+                self._audit_action(
+                    plan,
+                    "recovery-decision",
+                    node,
+                    f"{proposal.classification.value}/{proposal.action.value}: {proposal.detail}",
+                )
 
                 if node.decision is Decision.BLOCKED:  # quarantine / block (terminal)
                     self._record_recovery_outcome(plan, node, proposal, label, resolved=False)
@@ -239,7 +268,54 @@ class Scheduler:
                 plan.job_id, node.slide_stem, node.stage, plan.geometry
             ),
         )
+        self._audit_action(
+            plan, "dispatch", node, f"retry {node.command.value} attempt={node.attempts + 1}"
+        )
         return self._worker.execute(task)
+
+    # -- HITL gate + audit trail (governance, phase 2) ---------------------------
+
+    def _confirm(self, plan: Plan, node: PlanNode, proposal: RecoveryProposal) -> bool:
+        """Consult the HITL confirmer for a gated action; record the decision in the audit.
+
+        Returns True to apply the action, False to hold it. An approval under an unattended
+        run is recorded as a waiver (design D13); an attended approval as a human confirm.
+        """
+        approved = self._confirmer.confirm(proposal.action, node.slide_stem, proposal.detail)
+        if approved:
+            audit_action = "hitl-waiver" if self._config.unattended else "hitl-approve"
+        else:
+            audit_action = "hitl-hold"
+        self._audit_action(plan, audit_action, node, f"{proposal.action.value}: {proposal.detail}")
+        return approved
+
+    def _held_result(self, plan: Plan, node: PlanNode, proposal: RecoveryProposal) -> SlideResult:
+        """Record a slide whose irreversible action is awaiting human confirmation."""
+        reason = ReasonCode.AWAITING_CONFIRMATION
+        detail = f"awaiting confirmation for {proposal.action.value}: {proposal.detail}"
+        self._record_slide_outcome(plan, node, SlideOutcome.BLOCKED, reason)
+        self._record_agent_verdict(plan, node, reason, SlideOutcome.BLOCKED, agent=Agent.RECOVERY)
+        return SlideResult(node.slide_stem, SlideOutcome.BLOCKED, reason, detail)
+
+    def _audit_action(self, plan: Plan, action: str, node: PlanNode, detail: str) -> None:
+        """Append a consequential action to the tamper-evident audit trail (design D22).
+
+        The slide is pseudonymized and the detail is scrubbed of any Safe-Harbor identifier
+        shape, so the audit trail cannot become a PHI side channel.
+        """
+        if self._audit is None:
+            return
+        if safe_harbor_findings(detail):
+            detail = "[redacted: contained a Safe-Harbor identifier shape]"
+        self._audit.append(
+            action,
+            {
+                "job_id": plan.job_id,
+                "slide_stem": pseudonymize_stem(node.slide_stem, plan.job_id),
+                "stage": node.stage.value,
+                "detail": detail,
+            },
+        )
 
     # -- finalizers --------------------------------------------------------------
 

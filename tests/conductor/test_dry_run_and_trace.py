@@ -11,6 +11,7 @@ from pathlib import Path
 
 from atlas_conductor.config import JobConfig
 from atlas_conductor.contracts import Geometry, RequestedOutput
+from atlas_conductor.governance.phi import pseudonymize_stem
 from atlas_conductor.report import build_dry_run_report, build_report
 from atlas_conductor.run import plan_job, run_job
 from atlas_conductor.telemetry import InMemoryTelemetrySink
@@ -65,14 +66,18 @@ def test_dry_run_dispatches_nothing(tmp_path: Path) -> None:
 def test_trace_surfaces_ordered_decisions(tmp_path: Path) -> None:
     config, _ = _mixed_cohort(tmp_path)
     telemetry = InMemoryTelemetrySink()
-    run_job(config, telemetry)
+    result = run_job(config, telemetry)
     traces = slide_traces(telemetry)
 
+    # Traces are keyed by the PHI-free pseudonym at rest (design D12); correlate via the
+    # same per-run function the report uses.
+    fresh_key = pseudonymize_stem("fresh", result.job_id)
+    done_key = pseudonymize_stem("done", result.job_id)
     # A slide that ran shows reconcile → dispatch → verdict, in order.
-    fresh_steps = [e["event"] for e in traces["fresh"]]
+    fresh_steps = [e["event"] for e in traces[fresh_key]]
     assert fresh_steps == ["reconcile", "dispatch", "verdict"]
     # A skipped slide was never dispatched.
-    done_steps = [e["event"] for e in traces["done"]]
+    done_steps = [e["event"] for e in traces[done_key]]
     assert "dispatch" not in done_steps
 
 

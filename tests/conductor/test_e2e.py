@@ -110,8 +110,15 @@ def test_telemetry_families_written_to_disk(tmp_path: Path) -> None:
 
     assert len(jobs) == 1
     assert jobs[0]["cohort_size"] == 2
-    # Run is reconstructable: an outcome row per slide, agent events recorded.
-    assert {r["slide_stem"] for r in outcomes} == {"slide_a", "slide_b"}
+    # Run is reconstructable, but stems are pseudonymized at rest (design D12): the raw
+    # names never land, yet each slide's records stay correlatable within the run.
+    from atlas_conductor.governance.phi import pseudonymize_stem
+
+    job_id = jobs[0]["job_id"]
+    expected = {pseudonymize_stem("slide_a", job_id), pseudonymize_stem("slide_b", job_id)}
+    persisted = {r["slide_stem"] for r in outcomes}
+    assert persisted == expected
+    assert persisted.isdisjoint({"slide_a", "slide_b"})  # raw stem never persisted
     assert validations
     assert any(e["agent"] == "planner" for e in events)
     assert any(e["agent"] == "worker" for e in events)

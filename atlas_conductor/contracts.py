@@ -77,6 +77,9 @@ class ReasonCode(str, Enum):
     ATTEMPTS_EXHAUSTED = "attempts-exhausted"
     PRECONDITION_BLOCK = "precondition-block"
     UNKNOWN_FAILURE = "unknown-failure"
+    # governance (phase 2): an irreversible action is held pending human confirmation
+    # (design D13/D21). Additive; only set by the HITL gate when an action is not applied.
+    AWAITING_CONFIRMATION = "awaiting-confirmation"
 
 
 class SlideOutcome(str, Enum):
