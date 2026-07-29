@@ -24,9 +24,9 @@
 
 ## 5. DVC backend, behind the extra (D-LIN-4)
 
-- [ ] 5.1 Add `dvc>=<pinned>` to the `orchestrator` extra in `pyproject.toml` with a comment noting the verified version and the guarded-import rule; add nothing to core deps.
-- [ ] 5.2 Implement `DvcLineage` in `atlas_conductor/lineage/dvc_backend.py`, importing/shelling to `dvc` only inside its methods: write a `dvc.yaml` stage (deps = input cohort + config, outs = output HDF5s) and `.dvc` pointers carrying the D-LIN-2 hashes, using pseudonymized relative identifiers; perform no `dvc push`.
-- [ ] 5.3 Unit-test `DvcLineage` with the `dvc` invocation faked: assert a `dvc.yaml` stage + pointers are produced, that they carry the same hashes as the manifest backend, and that no raw stem/filename appears in any tracked path.
+- [x] 5.1 Add `dvc>=<pinned>` to the `orchestrator` extra in `pyproject.toml` with a comment noting the verified version and the guarded-import rule; add nothing to core deps.
+- [x] 5.2 Implement `DvcLineage` in `atlas_conductor/lineage/dvc_backend.py`, importing/shelling to `dvc` only inside its methods: write a `dvc.yaml` stage (deps = input cohort + config, outs = output HDF5s) and `.dvc` pointers carrying the D-LIN-2 hashes, using pseudonymized relative identifiers; perform no `dvc push`.
+- [x] 5.3 Unit-test `DvcLineage` with the `dvc` invocation faked: assert a `dvc.yaml` stage + pointers are produced, that they carry the same hashes as the manifest backend, and that no raw stem/filename appears in any tracked path.
 
 ## 6. Guards, docs, and CI
 

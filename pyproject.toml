@@ -116,6 +116,14 @@ orchestrator = [
     "google-adk>=1.5.0",
     "uvicorn>=0.29",
     "google-cloud-bigquery>=3.20",
+    # Phase 5 (add-conductor-data-lineage): the opt-in DVC lineage backend. `dvc` is used
+    # only when an operator opts into DVC-tracking the produced provenance files (via an
+    # injected runner in `atlas_conductor/lineage/dvc_backend.py`); the backend writes its
+    # `dvc.yaml` + `.dvc` pointers itself with stdlib, so recording lineage never requires the
+    # `dvc` binary and CI (which does not install `dvc`) stays green. `dvc`/`subprocess` are
+    # touched only inside the backend's methods — never at import — enforced by the CI
+    # import-guard test. Pin only; the version is unverified in CI because `dvc` is not installed.
+    "dvc>=3.0",
 ]
 release = [
     "build>=1.2.2",
