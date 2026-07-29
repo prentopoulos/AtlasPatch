@@ -23,6 +23,7 @@ jobs:
     # click + PyYAML, so this job installs the conductor's runtime surface and the
     # package (without the heavy upstream ML deps, which the fake-adapter loop never
     # exercises). The deterministic core running with no GPU and no slides is the point.
+    # streamlit is added for the phase-3 GUI AppTest suite (headless, no browser/GPU).
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +34,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install "h5py>=3.8.0" "numpy>=1.21.0" "click>=8.0.0" \
-            "pyyaml>=6.0" "pytest>=7.0.0" "ruff>=0.1.0"
+            "pyyaml>=6.0" "streamlit>=1.30" "pytest>=7.0.0" "ruff>=0.1.0"
       - name: Install atlas_conductor (register the console entry point)
         run: python -m pip install -e . --no-deps
       - name: Lint

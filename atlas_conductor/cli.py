@@ -81,6 +81,52 @@ def run(
     click.echo(build_report(result, telemetry, trace=trace))
 
 
+@cli.command()
+@click.argument(
+    "telemetry_dir",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    required=False,
+)
+def gui(telemetry_dir: Path | None) -> None:
+    """Launch the read-only observability GUI (Streamlit) over a TELEMETRY_DIR.
+
+    Shells out to ``streamlit run`` as a subprocess so this CLI process never imports
+    ``streamlit`` (the core import graph stays GUI-free — a CI import-guard test enforces
+    it). TELEMETRY_DIR is passed to the app via the ``ATLAS_CONDUCTOR_TELEMETRY_DIR`` env
+    var; if omitted, the app prompts for it in its sidebar.
+    """
+    import os
+    import subprocess
+
+    app_path = Path(__file__).resolve().parent / "gui" / "app.py"
+    env = os.environ.copy()
+    if telemetry_dir is not None:
+        env["ATLAS_CONDUCTOR_TELEMETRY_DIR"] = str(telemetry_dir)
+    command = [sys.executable, "-m", "streamlit", "run", str(app_path)]
+    raise SystemExit(subprocess.call(command, env=env))
+
+
+@cli.command(name="export-report")
+@click.argument("telemetry_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option(
+    "--format",
+    "fmt",
+    type=click.Choice(["json", "html"]),
+    default="json",
+    show_default=True,
+    help="The machine-readable report sibling to render (design D18).",
+)
+def export_report_cmd(telemetry_dir: Path, fmt: str) -> None:
+    """Render the HTML/JSON sibling of the report from a TELEMETRY_DIR.
+
+    Reads the append-only telemetry only — the same PHI-free read path the GUI uses — so
+    the sibling cannot diverge from what the GUI shows. Imports no ``streamlit``.
+    """
+    from atlas_conductor.gui.export import export_report
+
+    click.echo(export_report(telemetry_dir, fmt=fmt))
+
+
 def main() -> None:
     cli()
 

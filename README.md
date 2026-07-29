@@ -557,6 +557,30 @@ See the **[orchestration usage guide](docs/orchestration.md)** for the job-confi
 running with the fake (no-GPU) or real adapter, reading the report and decision trace, and
 the recovery and telemetry model.
 
+### Observability GUI
+
+A read-only **Streamlit** GUI renders over the same metadata-only telemetry: run history,
+per-slide **verdicts** (the validator's structural pass/fail with a reason code — never a
+prediction or confidence score), the per-slide **decision trace**, cohort metrics, and a
+live **Level-1 agent-choreography** view (the planner / worker / validator / recovery /
+scheduler shown active or idle, with a "now processing slide X · stage Y" ticker derived from
+the recorded agent events). It **imports nothing from the ML pipeline**, renders **no slide
+pixels**, and shows slide identifiers exactly as persisted (pseudonymized for gated runs).
+It is strictly an observer — it submits no jobs and confirms no actions.
+
+```bash
+# Launch over a run's telemetry directory (shells out to Streamlit):
+atlaspatch-conduct gui <output_dir>/telemetry
+
+# Or emit the machine-readable HTML/JSON sibling of the terminal report:
+atlaspatch-conduct export-report <output_dir>/telemetry --format json
+```
+
+`streamlit` ships in the `orchestrator` extra and is imported only by the GUI, so
+`pip install atlas-patch` and the core `atlaspatch` CLI stay GUI-free. The Level-2 true
+inter-agent **message-flow** view is deferred to the distribution phase (it needs the A2A
+wiring); this phase ships Level-1 component-state only.
+
 ## SLURM job scripts
 
 We prepared ready-to-run SLURM templates under `jobs/`:
