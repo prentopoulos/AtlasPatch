@@ -72,9 +72,11 @@ class ReasonCode(str, Enum):
     EMPTY_COHORT = "empty-cohort"
     NO_WSI_FILES = "no-wsi-files"
     UNREADABLE_INPUT = "unreadable-input"
-    # coordination
+    # coordination / recovery outcomes
     DEPENDENCY_BLOCKED = "dependency-blocked"
     ATTEMPTS_EXHAUSTED = "attempts-exhausted"
+    PRECONDITION_BLOCK = "precondition-block"
+    UNKNOWN_FAILURE = "unknown-failure"
 
 
 class SlideOutcome(str, Enum):
@@ -223,9 +225,14 @@ class PlanNode:
     target: TaskTarget
     decision: Decision = Decision.RUN
     reason: ReasonCode | None = None
+    detail: str = ""
     dependencies: tuple[str, ...] = ()
     attempt_budget: int = 3
     attempts: int = 0
+    # Recovery state, written only by the planner (design D6): the current tuning to
+    # dispatch with, and the ordered history of applied recovery mutations (design D14).
+    tuning: Tuning = field(default_factory=Tuning)
+    mutation_history: tuple[str, ...] = ()
 
 
 @dataclass

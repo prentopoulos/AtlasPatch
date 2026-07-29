@@ -132,17 +132,34 @@ class TelemetrySink(ABC):
     def record_agent_event(self, record: AgentEventRecord) -> None:
         ...
 
+    def read_agent_events(self) -> list[dict[str, Any]]:
+        """Read back the ``agent_events`` family as rows (for the decision trace)."""
+        raise NotImplementedError
 
-def _to_row(record: Any) -> dict[str, Any]:
-    """Serialize a record to a JSON-safe dict, stamping a timestamp if absent."""
-    if not is_dataclass(record):  # defensive: only typed records are accepted
-        raise TypeError(f"telemetry only accepts typed records, got {type(record).__name__}")
-    row = asdict(record)
+    def read_slide_stage_outcomes(self) -> list[dict[str, Any]]:
+        """Read back the ``slide_stage_outcomes`` family as rows."""
+        raise NotImplementedError
+
+
+def _normalize_row(row: dict[str, Any]) -> dict[str, Any]:
     for key, value in row.items():
         if isinstance(value, Enum):
             row[key] = value.value
         elif isinstance(value, Path):
             row[key] = str(value)
+    return row
+
+
+def _record_to_dict(record: Any) -> dict[str, Any]:
+    """Serialize a typed record to a JSON-safe dict without stamping."""
+    if not is_dataclass(record):  # defensive: only typed records are accepted
+        raise TypeError(f"telemetry only accepts typed records, got {type(record).__name__}")
+    return _normalize_row(asdict(record))
+
+
+def _to_row(record: Any) -> dict[str, Any]:
+    """Serialize a record to a JSON-safe dict, stamping a timestamp if absent."""
+    row = _record_to_dict(record)
     if "timestamp" in row and not row["timestamp"]:
         row["timestamp"] = _utcnow()
     return row
@@ -195,6 +212,12 @@ class JsonlTelemetrySink(TelemetrySink):
                     rows.append(json.loads(line))
         return rows
 
+    def read_agent_events(self) -> list[dict[str, Any]]:
+        return self.read_family("agent_events")
+
+    def read_slide_stage_outcomes(self) -> list[dict[str, Any]]:
+        return self.read_family("slide_stage_outcomes")
+
 
 class InMemoryTelemetrySink(TelemetrySink):
     """A backend that keeps records in lists — convenient for tests and assertions."""
@@ -216,3 +239,9 @@ class InMemoryTelemetrySink(TelemetrySink):
 
     def record_agent_event(self, record: AgentEventRecord) -> None:
         self.agent_events.append(record)
+
+    def read_agent_events(self) -> list[dict[str, Any]]:
+        return [_record_to_dict(r) for r in self.agent_events]
+
+    def read_slide_stage_outcomes(self) -> list[dict[str, Any]]:
+        return [_record_to_dict(r) for r in self.slide_stage_outcomes]

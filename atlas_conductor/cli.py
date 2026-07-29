@@ -1,9 +1,10 @@
 """The ``atlaspatch-conduct`` console entry point (task 1.2).
 
-A thin CLI over the run façade. Slice A1 exposes ``run`` against the fake adapter so
-the whole loop is demonstrable with no GPU. The real subprocess adapter and
-``--dry-run`` land in slice A2; heavy orchestrator dependencies (ADK/A2A/BigQuery) are
-never imported here.
+A thin CLI over the run façade. ``run`` plans and executes a job; ``--dry-run`` renders
+the reconciled plan and decision trace without dispatching (task 4.5); ``--adapter``
+selects the fake adapter (no GPU, the default and CI path) or the real subprocess
+adapter (slice A2). Heavy orchestrator dependencies (ADK/A2A/BigQuery) are never
+imported here.
 """
 
 from __future__ import annotations
@@ -15,8 +16,8 @@ import click
 
 from atlas_conductor import __version__
 from atlas_conductor.config import JobConfigError, load_job_config
-from atlas_conductor.report import build_report
-from atlas_conductor.run import run_job
+from atlas_conductor.report import build_dry_run_report, build_report
+from atlas_conductor.run import make_adapter, plan_job, run_job
 from atlas_conductor.telemetry import JsonlTelemetrySink
 
 
@@ -30,19 +31,37 @@ def cli() -> None:
 @click.argument("config_path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option(
     "--adapter",
-    type=click.Choice(["fake"]),
+    type=click.Choice(["fake", "real"]),
     default="fake",
     show_default=True,
-    help="Execution adapter. Only the fake adapter is available in this slice; the "
-    "real subprocess adapter lands in slice A2.",
+    help="Execution adapter: 'fake' needs no GPU (default, CI path); 'real' drives the "
+    "AtlasPatch CLI as a subprocess.",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Reconcile and print the plan and decision trace without dispatching any work.",
+)
+@click.option(
+    "--trace",
+    type=click.Choice(["failures", "all", "none"]),
+    default="failures",
+    show_default=True,
+    help="How much of the per-slide decision trace to show in the report.",
 )
 @click.option(
     "--telemetry-dir",
     type=click.Path(file_okay=False, path_type=Path),
     default=None,
-    help="Directory for the append-only telemetry sink. Defaults to " "<output_dir>/telemetry.",
+    help="Directory for the append-only telemetry sink. Defaults to <output_dir>/telemetry.",
 )
-def run(config_path: Path, adapter: str, telemetry_dir: Path | None) -> None:
+def run(
+    config_path: Path,
+    adapter: str,
+    dry_run: bool,
+    trace: str,
+    telemetry_dir: Path | None,
+) -> None:
     """Plan and execute a job described by CONFIG_PATH (a YAML job config)."""
     try:
         config = load_job_config(config_path)
@@ -51,9 +70,15 @@ def run(config_path: Path, adapter: str, telemetry_dir: Path | None) -> None:
 
     sink_dir = telemetry_dir or (config.output_dir / "telemetry")
     telemetry = JsonlTelemetrySink(sink_dir)
-    result = run_job(config, telemetry, adapter_name=adapter)
 
-    click.echo(build_report(result))
+    if dry_run:
+        plan = plan_job(config, telemetry)
+        click.echo(build_dry_run_report(plan, telemetry))
+        return
+
+    execution_adapter, adapter_name = make_adapter(adapter)
+    result = run_job(config, telemetry, execution_adapter, adapter_name)
+    click.echo(build_report(result, telemetry, trace=trace))
 
 
 def main() -> None:
