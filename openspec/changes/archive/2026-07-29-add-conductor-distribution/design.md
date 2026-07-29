@@ -122,6 +122,28 @@ topology) matched to the phase's observability purpose.
   loopback server path is retained so the demo shows genuine over-the-wire messages (the whole
   point of D8's justification).
 
+### D-DIST-7 — Each ADK peer is a *deterministic custom `BaseAgent`*, never an `LlmAgent` (as-built)
+The four peers are implemented as custom `google.adk.agents.BaseAgent` subclasses whose
+`_run_async_impl` yields a single acknowledgement event — **not** `LlmAgent` — so an ADK peer
+performs **no model inference**. Each is exposed over A2A with ADK's `to_a2a()`, and the
+transport reaches peers with ADK's `RemoteA2aAgent` client over an in-memory `Runner`
+(`transport/a2a.py`). Rationale: D8 mandates "Google ADK + A2A", but ADK is LLM-oriented and
+the conductor's load-bearing invariant is a *deterministic* core with no clinical/agentic
+reasoning (keeping the layer out of SaMD scope). A custom `BaseAgent` reconciles the two — the
+agents are genuinely ADK agents wired as real A2A peers, yet the deterministic-core invariant
+holds unchanged over the wire. Verified end-to-end against `google-adk` 2.5.0: the loopback
+integration test stands up the four ADK peers and confirms each peer's `_run_async_impl` runs
+on a handoff received over A2A, with per-slide `RunResult` parity to the in-process transport.
+- *Alternative considered:* wrap each agent as an `LlmAgent` with a trivial prompt. Rejected —
+  introduces a model dependency and non-determinism into a core whose whole premise is that it
+  does no reasoning; it would also make runs require model credentials.
+- *Alternative considered (and initially built):* the raw `a2a-sdk` `AgentExecutor`/FastAPI
+  server directly, without ADK. Rejected — D8 specifies ADK, and ADK's `to_a2a()` /
+  `RemoteA2aAgent` are the idiomatic path; the direct-`a2a-sdk` build was reworked onto ADK.
+- *Caveat:* ADK's A2A support is flagged `[EXPERIMENTAL]` by Google (functional, API subject to
+  change). It is confined to the opt-in `transport/a2a.py`; the deterministic core, the default
+  in-process transport, and CI never import it, so churn there cannot regress the core.
+
 ## Risks / Trade-offs
 
 - **ADK/A2A SDK churn or install weight on the dev box** → the extra is opt-in and every heavy
