@@ -17,6 +17,9 @@ reconciled plan without any dispatch.
 
 from __future__ import annotations
 
+import logging
+
+from atlas_conductor.classifier import FailureClassifier, RuleClassifier
 from atlas_conductor.config import JobConfig
 from atlas_conductor.contracts import Plan
 from atlas_conductor.dispatch import ExecutionAdapter, FakeAdapter, RealAdapter
@@ -26,6 +29,8 @@ from atlas_conductor.planning import Planner
 from atlas_conductor.scheduler import RunResult, Scheduler
 from atlas_conductor.telemetry import JsonlTelemetrySink, TelemetrySink
 from atlas_conductor.transport import AgentTransport, make_transport
+
+logger = logging.getLogger(__name__)
 
 
 def make_adapter(name: str) -> tuple[ExecutionAdapter, str]:
@@ -70,6 +75,39 @@ def make_lineage_backend(name: str) -> LineageBackend:
     raise ValueError(f"unknown lineage backend {name!r}; choose 'manifest' or 'dvc'")
 
 
+def make_classifier(config: JobConfig) -> FailureClassifier:
+    """Resolve the recovery classifier from ``config`` (design D-LRC-6), mirroring ``make_adapter``.
+
+    ``rule`` (the default) returns the hand-written rules, keeping a default run byte-for-byte
+    identical. ``learned`` loads the JSON model artifact and wraps it in a
+    :class:`~atlas_conductor.classifier.learned.LearnedClassifier` over a rule fallback. A
+    missing, unreadable, or ``feature_version``-mismatched model logs and falls back to the
+    rules rather than failing the run — the numpy model is imported only on this opt-in path.
+    """
+    if config.classifier_backend != "learned":
+        return RuleClassifier()
+
+    from atlas_conductor.classifier.learned import LearnedClassifier
+    from atlas_conductor.classifier.model import LinearModel
+
+    path = config.classifier_model_path
+    if not path:
+        logger.warning("classifier backend 'learned' selected but no model_path set; using rules")
+        return RuleClassifier()
+    try:
+        model = LinearModel.load(path)
+    except (OSError, ValueError) as exc:
+        # FileNotFoundError/OSError (missing/unreadable), JSONDecodeError/FeatureVersionMismatch
+        # (both ValueError) — degrade to the rules rather than failing the run.
+        logger.warning("could not load learned model %r (%s); falling back to rules", path, exc)
+        return RuleClassifier()
+    return LearnedClassifier(
+        model,
+        fallback=RuleClassifier(),
+        threshold=config.classifier_confidence_threshold,
+    )
+
+
 def plan_job(config: JobConfig, telemetry: TelemetrySink, audit: AuditTrail | None = None) -> Plan:
     """Build and reconcile the plan for ``config`` without dispatching anything."""
     return Planner(PhiSafeSink(telemetry, audit=audit)).build_plan(config)
@@ -83,6 +121,7 @@ def run_job(
     audit: AuditTrail | None = None,
     confirmer: Confirmer | None = None,
     transport: AgentTransport | None = None,
+    classifier: FailureClassifier | None = None,
 ) -> RunResult:
     """Plan and execute one job, returning the per-slide run result.
 
@@ -99,12 +138,18 @@ def run_job(
     one named by ``config.transport`` (in-process unless the config opts into ``a2a``),
     built over the same gated sink so its ``message_flow`` rows are PHI-free too. Passing an
     explicit transport (e.g. a stubbed A2A transport) overrides the config selection.
+
+    ``classifier`` selects the recovery classifier (design D-LRC-6); it defaults to the one
+    named by ``config.classifier_backend`` (``rule`` unless the config opts into ``learned``).
+    The default rule path keeps a default run byte-for-byte identical to pre-seam recovery.
     """
     if adapter is None:
         adapter = FakeAdapter()
     gated = PhiSafeSink(telemetry, audit=audit)
     if confirmer is None:
         confirmer = default_confirmer(config.unattended)
+    if classifier is None:
+        classifier = make_classifier(config)
     plan = Planner(gated).build_plan(config)
     if transport is None:
         transport = make_transport(config.transport, gated, plan.job_id)
@@ -116,6 +161,7 @@ def run_job(
         audit=audit,
         confirmer=confirmer,
         transport=transport,
+        classifier=classifier,
     )
     result = scheduler.run(plan)
     _record_lineage(config, plan)

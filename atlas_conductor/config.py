@@ -38,6 +38,10 @@ _TELEMETRY_BACKENDS = ("jsonl", "bigquery")
 # The lineage backends selectable from a job config (design D-LIN-1/7).
 _LINEAGE_BACKENDS = ("manifest", "dvc")
 
+# The recovery classifiers selectable from a job config (design D-LRC-6).
+_CLASSIFIER_BACKENDS = ("rule", "learned")
+_DEFAULT_CONFIDENCE_THRESHOLD = 0.6
+
 
 class JobConfigError(ValueError):
     """A job config is missing a field, malformed, or requests unsupported output."""
@@ -66,6 +70,13 @@ class JobConfig:
     # recording at run end through that backend — 'manifest' (default, credential-free) or
     # 'dvc' (opt-in, orchestrator extra). Enabling it changes no run output (design D-LIN-7).
     lineage_backend: str | None = None
+    # Recovery classifier: 'rule' (default — the hand-written rules, byte-for-byte identical to
+    # pre-seam recovery) or 'learned' (opt-in, a model artifact at ``classifier_model_path``).
+    # A 'learned' backend with a missing/unloadable/version-mismatched model falls back to the
+    # rules (design D-LRC-6); the selection never loosens a safety invariant.
+    classifier_backend: str = "rule"
+    classifier_model_path: str | None = None
+    classifier_confidence_threshold: float = _DEFAULT_CONFIDENCE_THRESHOLD
 
     @property
     def command(self) -> Command:
@@ -137,6 +148,9 @@ def parse_job_config(raw: dict[str, Any]) -> JobConfig:
 
     telemetry_backend, telemetry_dataset = _parse_telemetry(data.get("telemetry"))
     lineage_backend = _parse_lineage(data.get("lineage"))
+    classifier_backend, classifier_model_path, classifier_threshold = _parse_classifier(
+        data.get("classifier")
+    )
 
     geometry = Geometry(
         patch_size=_as_int(data["patch_size"], field="patch_size"),
@@ -160,6 +174,9 @@ def parse_job_config(raw: dict[str, Any]) -> JobConfig:
         telemetry_backend=telemetry_backend,
         telemetry_dataset=telemetry_dataset,
         lineage_backend=lineage_backend,
+        classifier_backend=classifier_backend,
+        classifier_model_path=classifier_model_path,
+        classifier_confidence_threshold=classifier_threshold,
     )
 
 
@@ -202,6 +219,41 @@ def _parse_lineage(value: Any) -> str | None:
             f"{', '.join(_LINEAGE_BACKENDS)}"
         )
     return backend
+
+
+def _parse_classifier(value: Any) -> tuple[str, str | None, float]:
+    """Parse the optional ``classifier:`` mapping into (backend, model_path, threshold).
+
+    Absent or empty → the default rule-based classifier. ``backend: learned`` accepts an
+    optional ``model_path`` and ``confidence_threshold`` (default 0.6); a learned backend with
+    no/unloadable model falls back to the rules at construction time (design D-LRC-6), so the
+    config layer only validates shape here.
+    """
+    if value in (None, ""):
+        return "rule", None, _DEFAULT_CONFIDENCE_THRESHOLD
+    if not isinstance(value, dict):
+        raise JobConfigError(f"'classifier' must be a mapping, got {type(value).__name__}")
+    backend = str(value.get("backend", "rule")).strip().lower() or "rule"
+    if backend not in _CLASSIFIER_BACKENDS:
+        raise JobConfigError(
+            f"unsupported classifier backend {backend!r}; choose one of: "
+            f"{', '.join(_CLASSIFIER_BACKENDS)}"
+        )
+    model_value = value.get("model_path")
+    model_path = str(model_value).strip() if model_value not in (None, "") else None
+    threshold_value = value.get("confidence_threshold")
+    if threshold_value is None or threshold_value == "":
+        threshold = _DEFAULT_CONFIDENCE_THRESHOLD
+    else:
+        try:
+            threshold = float(threshold_value)
+        except (TypeError, ValueError) as exc:
+            raise JobConfigError(
+                f"'confidence_threshold' must be a number, got {threshold_value!r}"
+            ) from exc
+        if not 0.0 <= threshold <= 1.0:
+            raise JobConfigError(f"'confidence_threshold' must be between 0 and 1, got {threshold}")
+    return backend, model_path, threshold
 
 
 def _parse_encoders(value: Any) -> tuple[str, ...]:

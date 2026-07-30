@@ -28,9 +28,9 @@
 
 ## 6. CLI + selection wiring (D-LRC-6)
 
-- [ ] 6.1 Add `train-classifier <telemetry-dir> -o <model>` and `eval-classifier <telemetry-dir> --model <model>` subcommands to `cli.py` (read-only telemetry path; no run mutation). Add CLI tests asserting a model is written and eval prints accuracy + safety metric.
-- [ ] 6.2 Add a `classifier:` config block to `config.py` (`backend`, `model_path`, `confidence_threshold`) and a `make_classifier(config)` factory in `run.py` mirroring `make_adapter`/`make_lineage_backend`; `learned` with a missing/unloadable/`feature_version`-mismatched model falls back to `rule`.
-- [ ] 6.3 Add `run --classifier {rule,learned}` (default `rule`), pass the selected classifier into the scheduler, and test that a default run is byte-for-byte unchanged while `--classifier learned` routes through `LearnedClassifier`.
+- [x] 6.1 Add `train-classifier <telemetry-dir> -o <model>` and `eval-classifier <telemetry-dir> --model <model>` subcommands to `cli.py` (read-only telemetry path; no run mutation). Add CLI tests asserting a model is written and eval prints accuracy + safety metric.
+- [x] 6.2 Add a `classifier:` config block to `config.py` (`backend`, `model_path`, `confidence_threshold`) and a `make_classifier(config)` factory in `run.py` mirroring `make_adapter`/`make_lineage_backend`; `learned` with a missing/unloadable/`feature_version`-mismatched model falls back to `rule`.
+- [x] 6.3 Add `run --classifier {rule,learned}` (default `rule`), pass the selected classifier into the scheduler, and test that a default run is byte-for-byte unchanged while `--classifier learned` routes through `LearnedClassifier`.
 
 ## 7. Model Card + docs
 
