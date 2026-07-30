@@ -1,5 +1,7 @@
 node_modules/
 dist/
+# The repo-root .gitignore (a Python template) ignores `lib/`; re-include the SPA's src/lib.
+!src/lib/
 *.local
 .vite/
 test-results/
