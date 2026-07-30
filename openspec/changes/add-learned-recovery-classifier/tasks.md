@@ -11,8 +11,8 @@
 
 ## 3. The learned model (D-LRC-3)
 
-- [ ] 3.1 Add `classifier/model.py`: a numpy multinomial logistic-regression `LinearModel` (weights+bias over feature dim × the six `Classification` classes), deterministic mini-batch GD with fixed seed/hyperparameters, and `softmax` inference returning `(class, confidence)`.
-- [ ] 3.2 Add JSON serialization (`{feature_version, classes, weights, bias, config}`) with `save`/`load`; `load` raises/refuses on a `feature_version` mismatch. Add a round-trip + determinism test (train twice on the same data/seed → identical artifact).
+- [x] 3.1 Add `classifier/model.py`: a numpy multinomial logistic-regression `LinearModel` (weights+bias over feature dim × the six `Classification` classes), deterministic mini-batch GD with fixed seed/hyperparameters, and `softmax` inference returning `(class, confidence)`.
+- [x] 3.2 Add JSON serialization (`{feature_version, classes, weights, bias, config}`) with `save`/`load`; `load` raises/refuses on a `feature_version` mismatch. Add a round-trip + determinism test (train twice on the same data/seed → identical artifact).
 
 ## 4. LearnedClassifier + safety floor (D-LRC-4)
 
