@@ -40,7 +40,7 @@
 
 ## 5. CLI wiring (D-CMP-5)
 
-- [ ] 5.1 Add an `export-dossier <telemetry-dir> [--format json|html]` Click subcommand to `cli.py`
+- [x] 5.1 Add an `export-dossier <telemetry-dir> [--format json|html]` Click subcommand to `cli.py`
   (read-only, mirroring `export-report`) that prints `build_evidence(...)` in the chosen format. Add a
   CLI test asserting JSON and HTML render for a recorded run.
 
