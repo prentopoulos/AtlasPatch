@@ -132,7 +132,10 @@ def export_report_cmd(telemetry_dir: Path, fmt: str) -> None:
     """Render the HTML/JSON sibling of the report from a TELEMETRY_DIR.
 
     Reads the append-only telemetry only — the same PHI-free read path the GUI uses — so
-    the sibling cannot diverge from what the GUI shows. Imports no ``streamlit``.
+    the sibling cannot diverge from what the GUI shows. Imports no ``streamlit``. The JSON
+    sibling is the versioned observability *snapshot* — the single machine-readable payload
+    (schema version, per-run verdicts, decision trace, cohort metrics, and derived
+    choreography and message-flow state) that any renderer consumes (design D-SNAP-3).
     """
     from atlas_conductor.gui.export import export_report
 
