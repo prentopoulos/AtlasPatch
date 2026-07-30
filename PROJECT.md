@@ -21,7 +21,7 @@ first one below whose status is not Done.
 | 3 | `add-conductor-gui` | Done | Read-only observability GUI (Streamlit) re-skinned clean-room from a diagnostic dashboard into an operational one — verdicts not predictions, decision-trace not Grad-CAM, no slide pixels — plus a live agent-choreography view (Level 1: component-state). Renders over the PHI-free telemetry; imports nothing from `atlas_patch`. See design D18. |
 | 4 | `add-conductor-distribution` | Done | Wire the four logical agents as A2A peers (Google ADK + A2A), add the optional BigQuery telemetry backend, and the GUI Level 2 message-flow view. A2A earns its weight here as watchable choreography (design D8); the core already runs without it. |
 | 5 | `add-conductor-data-lineage` | Done | DVC/Git data-lineage pipeline over the orchestrator's inputs/outputs. Additive layer — no rework of earlier phases. |
-| 6 | `add-learned-recovery-classifier` | Planned | Replace the rule-based failure classifier with one learned from the telemetry recovery dataset. The declarative task contract keeps this seam clean. |
+| 6 | `add-learned-recovery-classifier` | Done | Replace the rule-based failure classifier with one learned from the telemetry recovery dataset. The declarative task contract keeps this seam clean. |
 | 7 | `add-compliance-dossier` | Planned | Full EU AI Act / ISO 42001 compliance dossier building on the phase-2 Model Card and audit trail. |
 
 Phases 2–7 are additive follow-ons (design D17 for 2–4, the scope note for 5–7). Each is

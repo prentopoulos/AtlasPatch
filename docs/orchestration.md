@@ -114,6 +114,41 @@ drawn only from AtlasPatch's own tuning knobs:
   `dependency-blocked` so they are never scheduled;
 - **unknown** → block (never blindly retried), surfacing the raw stderr tail for triage.
 
+### Learned recovery classifier (optional)
+
+Classification runs behind one pluggable seam, and **the rule-based classifier above is the
+default** — a default run is byte-for-byte identical to before this feature existed. You can
+optionally train a classifier from a run's own recovery telemetry (the labeled
+`slide_stage_outcomes` dataset) and route recovery through it:
+
+```bash
+# Train a model from a telemetry dir (read-only; writes only the JSON artifact).
+atlaspatch-conduct train-classifier /data/out/telemetry -o model.json
+
+# Evaluate it: accuracy, per-class precision/recall, and a safety metric (should always be 0).
+atlaspatch-conduct eval-classifier /data/out/telemetry --model model.json
+
+# Route a run through it (overrides the config block).
+atlaspatch-conduct run job.yaml --classifier learned
+```
+
+…or select it from the job config (the CLI flag overrides this):
+
+```yaml
+classifier:
+  backend: learned          # 'rule' (default) or 'learned'
+  model_path: model.json    # the trained artifact
+  confidence_threshold: 0.6 # abstain below this
+```
+
+The learned model is a compact numpy logistic regression over **operational-only, PHI-free**
+features (stderr-token presence flags, the structural verdict reason code, the exit-code sign,
+the attempt bucket — never slide content) and is **deterministic** (fixed seed → a reproducible
+JSON artifact, no cloud, no dependency beyond core `numpy`). It carries a **safety floor**: it
+abstains to the rules when unconfident and can never turn a rule-blocked failure into a retry, so
+it is provably never less safe than the rules. A missing, unreadable, or version-mismatched model
+falls back to the rules rather than failing the run.
+
 ## Telemetry
 
 Every run appends metadata-only records — `jobs`, `slide_stage_outcomes`, `validation_results`,

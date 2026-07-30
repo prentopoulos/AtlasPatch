@@ -10,6 +10,7 @@ imported here.
 from __future__ import annotations
 
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import click
@@ -54,18 +55,30 @@ def cli() -> None:
     default=None,
     help="Directory for the append-only telemetry sink. Defaults to <output_dir>/telemetry.",
 )
+@click.option(
+    "--classifier",
+    "classifier_backend",
+    type=click.Choice(["rule", "learned"]),
+    default=None,
+    help="Recovery classifier: 'rule' (default) is the hand-written rules; 'learned' routes "
+    "through the model at the config's classifier.model_path. Overrides the config block.",
+)
 def run(
     config_path: Path,
     adapter: str,
     dry_run: bool,
     trace: str,
     telemetry_dir: Path | None,
+    classifier_backend: str | None,
 ) -> None:
     """Plan and execute a job described by CONFIG_PATH (a YAML job config)."""
     try:
         config = load_job_config(config_path)
     except JobConfigError as exc:
         raise click.ClickException(str(exc)) from exc
+
+    if classifier_backend is not None:
+        config = replace(config, classifier_backend=classifier_backend)
 
     sink_dir = telemetry_dir or (config.output_dir / "telemetry")
     telemetry = make_telemetry_sink(config, str(sink_dir))
@@ -161,6 +174,82 @@ def lineage(output_dir: Path, backend: str, telemetry_dir: Path | None) -> None:
     result = make_lineage_backend(backend).record(run_input)
     location = result.manifest_path or output_dir
     click.echo(f"recorded {len(result.records)} lineage record(s) via {backend} -> {location}")
+
+
+@cli.command(name="train-classifier")
+@click.argument("telemetry_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option(
+    "-o",
+    "--output",
+    "model_path",
+    type=click.Path(dir_okay=False, path_type=Path),
+    required=True,
+    help="Path to write the trained JSON model artifact.",
+)
+@click.option(
+    "--seed", type=int, default=0, show_default=True, help="Training seed (deterministic)."
+)
+def train_classifier_cmd(telemetry_dir: Path, model_path: Path, seed: int) -> None:
+    """Train a learned recovery classifier from a TELEMETRY_DIR's recovery dataset.
+
+    Reads the ``slide_stage_outcomes`` family through the same read-only, PHI-free path the GUI
+    and ``lineage`` use — it never touches a run's outputs — and writes a committable JSON model
+    artifact. Training is deterministic for a fixed dataset and seed.
+    """
+    from atlas_conductor.classifier.dataset import read_dataset
+    from atlas_conductor.classifier.train import train_model
+    from atlas_conductor.telemetry import JsonlTelemetrySink
+
+    dataset = read_dataset(JsonlTelemetrySink(telemetry_dir))
+    if len(dataset) == 0:
+        raise click.ClickException(
+            "no labeled recovery rows found in telemetry; run a cohort with failures first"
+        )
+    out = train_model(dataset, seed=seed).save(model_path)
+    click.echo(f"trained on {len(dataset)} recovery row(s) -> {out}")
+
+
+@cli.command(name="eval-classifier")
+@click.argument("telemetry_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option(
+    "--model",
+    "model_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+    help="Path to the trained JSON model artifact to evaluate.",
+)
+@click.option(
+    "--threshold",
+    type=float,
+    default=0.6,
+    show_default=True,
+    help="Abstention confidence threshold for the composed learned classifier.",
+)
+def eval_classifier_cmd(telemetry_dir: Path, model_path: Path, threshold: float) -> None:
+    """Evaluate a learned classifier over a TELEMETRY_DIR, reporting accuracy and safety.
+
+    Reports classification accuracy, per-class precision/recall, and the safety metric — the
+    fraction of should-block failures the composed classifier would retry, which is 0 by
+    construction of the abstention floor. Read-only; it mutates no run.
+    """
+    from atlas_conductor.classifier import RuleClassifier
+    from atlas_conductor.classifier.dataset import read_dataset
+    from atlas_conductor.classifier.evaluate import evaluate, format_report
+    from atlas_conductor.classifier.learned import LearnedClassifier
+    from atlas_conductor.classifier.model import FeatureVersionMismatch, LinearModel
+    from atlas_conductor.telemetry import JsonlTelemetrySink
+
+    dataset = read_dataset(JsonlTelemetrySink(telemetry_dir))
+    if len(dataset) == 0:
+        raise click.ClickException(
+            "no labeled recovery rows found in telemetry to evaluate against"
+        )
+    try:
+        model = LinearModel.load(model_path)
+    except FeatureVersionMismatch as exc:
+        raise click.ClickException(str(exc)) from exc
+    learned = LearnedClassifier(model, fallback=RuleClassifier(), threshold=threshold)
+    click.echo(format_report(evaluate(learned, dataset)))
 
 
 def main() -> None:

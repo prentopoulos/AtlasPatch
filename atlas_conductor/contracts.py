@@ -201,6 +201,11 @@ class Outcome:
     # Ground-truth label when produced by the fake adapter's injection (design D14);
     # ``None`` for the real adapter. Lets CI measure classifier accuracy vs truth.
     injected_label: str | None = None
+    # Operational retry context: which attempt produced this outcome. ``None`` when unknown
+    # (e.g. a cohort first pass). The scheduler stamps ``node.attempts`` here at the classify
+    # site so the learned classifier's attempt-bucket feature (design D-LRC-2) is available at
+    # inference the same way it is at training; the worker forwards the adapter outcome raw.
+    attempt: int | None = None
 
 
 @dataclass(frozen=True)

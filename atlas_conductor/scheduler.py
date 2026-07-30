@@ -19,10 +19,11 @@ recovery dataset (design D14).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 
 from atlas_conductor.agents import Agent
+from atlas_conductor.classifier import FailureClassifier, RuleClassifier
 from atlas_conductor.config import JobConfig
 from atlas_conductor.contracts import (
     STAGES_FOR_OUTPUT,
@@ -44,7 +45,7 @@ from atlas_conductor.governance.audit import AuditTrail
 from atlas_conductor.governance.hitl import AutoApproveConfirmer, Confirmer, requires_confirmation
 from atlas_conductor.governance.phi import pseudonymize_stem, safe_harbor_findings
 from atlas_conductor.planning import Planner
-from atlas_conductor.recovery import RecoveryProposal, classify, propose
+from atlas_conductor.recovery import RecoveryProposal, propose
 from atlas_conductor.telemetry import (
     AgentEventRecord,
     JobRecord,
@@ -102,12 +103,17 @@ class Scheduler:
         audit: AuditTrail | None = None,
         confirmer: Confirmer | None = None,
         transport: AgentTransport | None = None,
+        classifier: FailureClassifier | None = None,
     ) -> None:
         self._config = config
         self._adapter = adapter
         self._telemetry = telemetry
         self._adapter_name = adapter_name
         self._audit = audit
+        # Failure classification is routed through the pluggable seam (design D-LRC-1). A bare
+        # scheduler defaults to the rule-based classifier, so the default path is byte-for-byte
+        # identical to pre-seam recovery; ``run_job`` passes the classifier selected from config.
+        self._classifier: FailureClassifier = classifier or RuleClassifier()
         # The HITL gate is installed at the run façade (design D21); a bare scheduler
         # defaults to auto-approve so its unit tests stay ungated. ``run_job`` passes the
         # real confirmer selected from ``JobConfig.unattended``.
@@ -247,8 +253,18 @@ class Scheduler:
 
                 # validator → recovery: an invalid verdict is handed to recovery to classify.
                 self._route(Agent.VALIDATOR, Agent.RECOVERY, MessageType.CLASSIFY, node)
-                classification, signature = classify(last_outcome, verdict)
-                proposal = propose(classification, signature, node, last_outcome)
+                # Stamp the attempt count onto a copy so the learned classifier's attempt-bucket
+                # feature is available at inference (design D-LRC-2); the worker's raw outcome is
+                # left untouched, and the rule classifier ignores the field.
+                to_classify = (
+                    replace(last_outcome, attempt=node.attempts)
+                    if last_outcome is not None
+                    else None
+                )
+                classified = self._classifier.classify(to_classify, verdict)
+                proposal = propose(
+                    classified.classification, classified.signature, node, last_outcome
+                )
                 label = last_outcome.injected_label if last_outcome else None
 
                 # HITL gate (design D13/D21): an irreversible/expensive action is held for
