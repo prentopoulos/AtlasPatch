@@ -30,6 +30,6 @@
 
 ## 4. Verification & docs
 
-- [ ] 4.1 Update the README / GUI docs to describe the static React observability GUI: how it is served from the wheel, the bundled demo, and the snapshot file loader (replacing the Streamlit run instructions).
-- [ ] 4.2 Confirm `pip install -e . --no-deps` and `atlaspatch-conduct --version` still work with Streamlit gone, and that the CLI import graph pulls in no `streamlit`.
-- [ ] 4.3 Run the full local gate — `ruff check`, `pytest tests/conductor -q`, `npm run` Vitest + Playwright, `vite build` + build-and-diff, and `openspec validate --all --strict` — and confirm all green before opening for merge.
+- [x] 4.1 Update the README / GUI docs to describe the static React observability GUI: how it is served from the wheel, the bundled demo, and the snapshot file loader (replacing the Streamlit run instructions).
+- [x] 4.2 Confirm `pip install -e . --no-deps` and `atlaspatch-conduct --version` still work with Streamlit gone, and that the CLI import graph pulls in no `streamlit`.
+- [x] 4.3 Run the full local gate — `ruff check`, `pytest tests/conductor -q`, `npm run` Vitest + Playwright, `vite build` + build-and-diff, and `openspec validate --all --strict` — and confirm all green before opening for merge.

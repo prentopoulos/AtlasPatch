@@ -559,33 +559,38 @@ the recovery and telemetry model.
 
 ### Observability GUI
 
-A read-only **Streamlit** GUI renders over the same metadata-only telemetry: run history,
-per-slide **verdicts** (the validator's structural pass/fail with a reason code — never a
-prediction or confidence score), the per-slide **decision trace**, cohort metrics, and a
-live **Level-1 agent-choreography** view (the planner / worker / validator / recovery /
-scheduler shown active or idle, with a "now processing slide X · stage Y" ticker derived from
-the recorded agent events). It **imports nothing from the ML pipeline**, renders **no slide
-pixels**, and shows slide identifiers exactly as persisted (pseudonymized for gated runs).
-It is strictly an observer — it submits no jobs and confirms no actions.
+A read-only **static React** GUI renders the metadata-only telemetry: run history, per-slide
+**verdicts** (the validator's structural pass/fail with a reason code — never a prediction or
+confidence score), the per-slide **decision trace**, cohort metrics, and the **agent-choreography**
+view (Level-1 component-state — planner / worker / validator / recovery / scheduler shown active or
+idle with a "now processing slide X · stage Y" ticker — plus Level-2 message-flow edges). It
+**imports nothing from the ML pipeline**, renders **no slide pixels**, and shows slide identifiers
+exactly as persisted (pseudonymized for gated runs). It is strictly an observer — it submits no jobs
+and confirms no actions.
+
+The GUI is a **static, point-in-time renderer**: a prebuilt bundle is vendored in the wheel, so
+`pip install atlas-patch` needs **no Node and no build step**. It reads one exported
+`snapshot.json` — no Python runtime, no telemetry directory, no server. Out of the box it renders a
+**bundled demo**; load a real run with the in-page **file picker or drag-and-drop**.
 
 ```bash
-# Launch over a run's telemetry directory (shells out to Streamlit):
-atlaspatch-conduct gui <output_dir>/telemetry
+# Serve the packaged GUI locally and open it in a browser (stdlib HTTP server, no Node):
+atlaspatch-conduct gui
 
-# Or emit the machine-readable HTML/JSON sibling of the terminal report:
-atlaspatch-conduct export-report <output_dir>/telemetry --format json
+# Export a run's snapshot, then load it in the GUI via the file picker / drag-and-drop:
+atlaspatch-conduct export-report <output_dir>/telemetry --format json > snapshot.json
 ```
 
 The `--format json` output is the versioned observability **snapshot** — a single,
 schema-versioned, JSON-safe payload carrying everything the observability surface shows (run
 history, per-slide structural verdicts, decision trace, cohort metrics, and the derived Level-1
-choreography and Level-2 message-flow state). It is the one machine-readable contract every
-renderer consumes; its `schema_version` lets a renderer pin the shape. (This replaces the earlier
-partial JSON export, which omitted the derived state and carried no version.) The HTML sibling
-renders the same assembled data.
+choreography and Level-2 message-flow state). It is the one machine-readable contract the renderer
+consumes; the SPA pins its `schema_version` and shows an explicit incompatibility state on mismatch.
+The HTML sibling renders the same assembled data.
 
-`streamlit` ships in the `orchestrator` extra and is imported only by the GUI, so
-`pip install atlas-patch` and the core `atlaspatch` CLI stay GUI-free.
+The GUI needs **no runtime Python dependency** (Streamlit was retired in favour of the static
+bundle), so `pip install atlas-patch` and the core `atlaspatch` CLI stay GUI-free. The SPA source
+lives at repo-root [`web/`](web/); CI rebuilds it and asserts the vendored bundle is byte-identical.
 
 ### Compliance dossier and per-run evidence
 
