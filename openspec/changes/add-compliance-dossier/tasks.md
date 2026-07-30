@@ -1,10 +1,10 @@
 ## 1. Control register + compliance package (D-CMP-1)
 
-- [ ] 1.1 Add `atlas_conductor/compliance/__init__.py` and `compliance/registry.py` defining the frozen
+- [x] 1.1 Add `atlas_conductor/compliance/__init__.py` and `compliance/registry.py` defining the frozen
   `ControlRow(id, framework, clause, obligation, control, evidence_module, evidence_test)` dataclass and
   a `load_registry(path) -> list[ControlRow]` that parses `compliance/controls.yaml` (JSON fallback per
   D-CMP-1). Add a unit test that the shipped register parses and every row has all fields populated.
-- [ ] 1.2 Author `compliance/controls.yaml` — the obligation→control→evidence rows for the EU AI Act
+- [x] 1.2 Author `compliance/controls.yaml` — the obligation→control→evidence rows for the EU AI Act
   Annex IV elements and ISO/IEC 42001 clauses the system addresses, each citing an existing module and
   test node (PHI gate, HITL gate, audit chain, egress guard, determinism, card drift-check).
 
