@@ -24,38 +24,22 @@ attempt budget.
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 
+from atlas_conductor.classifier import RuleClassifier
 from atlas_conductor.contracts import (
     Classification,
     Outcome,
     PlanNode,
-    ReasonCode,
     RecoveryAction,
     Tuning,
     Verdict,
 )
 
-# stderr signatures (design D3: stderr is a classification hint, never a success signal).
-_OOM_RE = re.compile(r"cuda out of memory|out of memory|CUDA_ERROR_OUT_OF_MEMORY", re.IGNORECASE)
-_PRECONDITION_RE = re.compile(
-    r"huggingface|hf_token|gated|401 client error|unauthorized|could not find model|"
-    r"access to model|token is required|not installed|no module named",
-    re.IGNORECASE,
-)
-
-# Structural verdict reasons that mean the invocation ran but produced bad output.
-_STRUCTURAL_REASONS = frozenset(
-    {
-        ReasonCode.ROW_MISMATCH,
-        ReasonCode.NAN_FEATURES,
-        ReasonCode.MISSING_FEATURES,
-        ReasonCode.NO_COORDS,
-        ReasonCode.CORRUPT,
-        ReasonCode.MISSING,
-    }
-)
+# The shared rule classifier the module-level ``classify`` wrapper delegates to (design
+# D-LRC-1). Classification now lives behind the ``FailureClassifier`` seam; this wrapper is
+# retained so existing callers and imports are behavior-identical.
+_RULE_CLASSIFIER = RuleClassifier()
 
 # The monotone mutation ladder: each rung only *lowers* resource pressure (design D7).
 _LADDER: tuple[Tuning, ...] = (
@@ -80,28 +64,11 @@ class RecoveryProposal:
 def classify(outcome: Outcome | None, verdict: Verdict) -> tuple[Classification, str]:
     """Classify a failure from the execution outcome and the structural verdict.
 
-    Returns ``(classification, signature)`` where the signature is a short label used in
-    the labeled recovery dataset (design D14).
+    A thin wrapper over a shared :class:`RuleClassifier` (design D-LRC-1), retained so
+    existing callers keep the ``(classification, signature)`` tuple contract unchanged.
     """
-    stderr = outcome.stderr_tail if outcome is not None else ""
-    if _OOM_RE.search(stderr):
-        return Classification.RESOURCE_TRANSIENT, "cuda-oom"
-    if _PRECONDITION_RE.search(stderr):
-        return Classification.PRECONDITION_BLOCK, "precondition"
-
-    if verdict.reason is ReasonCode.UNREADABLE_INPUT:
-        return Classification.INPUT_DATA, "unreadable-input"
-
-    # A nonzero exit with no recognized signature is an unrecognized *process* failure
-    # (e.g. a crash): treat it as unknown and block rather than trusting the structural
-    # verdict and force-retrying (design D3/6.3). Only when the process claims success
-    # (exit 0) do we attribute a bad-output verdict to a structural cause.
-    if outcome is not None and outcome.exit_code != 0:
-        return Classification.UNKNOWN, "unclassified-nonzero-exit"
-
-    if verdict.reason in _STRUCTURAL_REASONS:
-        return Classification.STRUCTURAL_INVALID, f"structural:{verdict.reason.value}"
-    return Classification.UNKNOWN, "unclassified"
+    result = _RULE_CLASSIFIER.classify(outcome, verdict)
+    return result.classification, result.signature
 
 
 def propose(

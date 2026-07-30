@@ -1,8 +1,8 @@
 ## 1. The classifier seam (D-LRC-1)
 
-- [ ] 1.1 Add `atlas_conductor/classifier/__init__.py` defining the `FailureClassifier` protocol (`classify(outcome, verdict) -> ClassificationResult`) and the frozen `ClassificationResult(classification, signature, confidence, abstained=False)` dataclass.
-- [ ] 1.2 Move `recovery.classify`'s body verbatim into `RuleClassifier.classify` (in `classifier/rule.py`), returning `confidence=1.0`; keep `recovery.classify` as a thin wrapper delegating to a shared `RuleClassifier` so existing imports and behavior are unchanged.
-- [ ] 1.3 Thread a `FailureClassifier` into the scheduler (default `RuleClassifier`) and call it at the current `classify(...)` site; leave `recovery.propose` consuming `(classification, signature)` unchanged. Add a test asserting the default scheduler path is behavior-identical to pre-change recovery.
+- [x] 1.1 Add `atlas_conductor/classifier/__init__.py` defining the `FailureClassifier` protocol (`classify(outcome, verdict) -> ClassificationResult`) and the frozen `ClassificationResult(classification, signature, confidence, abstained=False)` dataclass.
+- [x] 1.2 Move `recovery.classify`'s body verbatim into `RuleClassifier.classify` (in `classifier/rule.py`), returning `confidence=1.0`; keep `recovery.classify` as a thin wrapper delegating to a shared `RuleClassifier` so existing imports and behavior are unchanged.
+- [x] 1.3 Thread a `FailureClassifier` into the scheduler (default `RuleClassifier`) and call it at the current `classify(...)` site; leave `recovery.propose` consuming `(classification, signature)` unchanged. Add a test asserting the default scheduler path is behavior-identical to pre-change recovery.
 
 ## 2. Operational, PHI-free features (D-LRC-2)
 
