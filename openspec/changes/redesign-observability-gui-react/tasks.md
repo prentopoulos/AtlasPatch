@@ -1,12 +1,12 @@
 ## 1. Slice A — scaffold + snapshot-load skeleton (green in CI)
 
-- [ ] 1.1 Scaffold the Vite + TypeScript + React project at repo-root `web/` (`package.json`, `tsconfig`, `vite.config.ts`, `package-lock.json`); set `vite build` `outDir` to `../atlas_conductor/gui/web_dist`.
-- [ ] 1.2 Add and configure Tailwind CSS and initialize shadcn/ui (Radix + Tailwind primitives) with a base theme.
-- [ ] 1.3 Define the payload TypeScript types mirroring the frozen snapshot shape (`schema_version`, `agents`, `runs[].{job_id, job, cohort_size, counts, slides[].{slide_stem, outcome, reason_code, detail, trace}, choreography, message_flow}`) and a `SNAPSHOT_SCHEMA_VERSION` constant pinned to `1`.
-- [ ] 1.4 Generate a committed demo `snapshot.json` fixture by running `assemble_snapshot` over a seeded telemetry fixture (documented, reproducible), and bundle it as the default on-load view.
-- [ ] 1.5 Implement snapshot loading: render the bundled demo with no input; add a file-picker + drag-drop loader that validates the top-level shape, compares `schema_version` to the pinned constant, and shows an explicit incompatibility state on mismatch and an error (not a crash) on a malformed file.
-- [ ] 1.6 Render the run-history panel from the runs' job rows (job id, status, cohort, per-outcome counts) plus a run selector; render an empty state for a zero-run snapshot.
-- [ ] 1.7 Add the CI `web` job (`actions/setup-node@v4`, Node 20): `npm ci` → `vitest run` → `vite build`; add a first Vitest test asserting the demo snapshot loads and the history panel populates.
+- [x] 1.1 Scaffold the Vite + TypeScript + React project at repo-root `web/` (`package.json`, `tsconfig`, `vite.config.ts`, `package-lock.json`); set `vite build` `outDir` to `../atlas_conductor/gui/web_dist`.
+- [x] 1.2 Add and configure Tailwind CSS and initialize shadcn/ui (Radix + Tailwind primitives) with a base theme.
+- [x] 1.3 Define the payload TypeScript types mirroring the frozen snapshot shape (`schema_version`, `agents`, `runs[].{job_id, job, cohort_size, counts, slides[].{slide_stem, outcome, reason_code, detail, trace}, choreography, message_flow}`) and a `SNAPSHOT_SCHEMA_VERSION` constant pinned to `1`.
+- [x] 1.4 Generate a committed demo `snapshot.json` fixture by running `assemble_snapshot` over a seeded telemetry fixture (documented, reproducible), and bundle it as the default on-load view.
+- [x] 1.5 Implement snapshot loading: render the bundled demo with no input; add a file-picker + drag-drop loader that validates the top-level shape, compares `schema_version` to the pinned constant, and shows an explicit incompatibility state on mismatch and an error (not a crash) on a malformed file.
+- [x] 1.6 Render the run-history panel from the runs' job rows (job id, status, cohort, per-outcome counts) plus a run selector; render an empty state for a zero-run snapshot.
+- [x] 1.7 Add the CI `web` job (`actions/setup-node@v4`, Node 20): `npm ci` → `vitest run` → `vite build`; add a first Vitest test asserting the demo snapshot loads and the history panel populates.
 
 ## 2. Slice B — panels + design system (green in CI)
 

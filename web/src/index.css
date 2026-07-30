@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+/* Dark mode is class-driven (index.html sets .dark); this keeps the operational surface
+   dark by default while still supporting a light render if the class is removed. */
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------------------
+   Design tokens (design D-REACT-3): a neutral operational surface plus the
+   four-verdict semantic system that is the design spine. Runtime CSS variables
+   are mapped into Tailwind's theme via `@theme inline` so utilities like
+   `bg-card`, `text-muted-foreground`, and `text-verdict-valid` exist.
+   --------------------------------------------------------------------------- */
+:root {
+  --background: oklch(0.98 0.003 250);
+  --foreground: oklch(0.22 0.02 255);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.02 255);
+  --muted: oklch(0.96 0.005 250);
+  --muted-foreground: oklch(0.5 0.02 255);
+  --border: oklch(0.9 0.008 255);
+  --ring: oklch(0.7 0.09 220);
+  --accent: oklch(0.55 0.13 235);
+
+  --verdict-valid: oklch(0.6 0.14 155);
+  --verdict-valid-soft: oklch(0.94 0.05 155);
+  --verdict-skipped: oklch(0.55 0.03 250);
+  --verdict-skipped-soft: oklch(0.94 0.01 250);
+  --verdict-quarantined: oklch(0.62 0.14 70);
+  --verdict-quarantined-soft: oklch(0.95 0.06 75);
+  --verdict-blocked: oklch(0.58 0.19 25);
+  --verdict-blocked-soft: oklch(0.95 0.05 25);
+}
+
+.dark {
+  --background: oklch(0.17 0.012 260);
+  --foreground: oklch(0.95 0.005 250);
+  --card: oklch(0.21 0.014 260);
+  --card-foreground: oklch(0.96 0.005 250);
+  --muted: oklch(0.26 0.014 260);
+  --muted-foreground: oklch(0.7 0.015 255);
+  --border: oklch(0.3 0.016 260);
+  --ring: oklch(0.72 0.12 210);
+  --accent: oklch(0.78 0.12 205);
+
+  --verdict-valid: oklch(0.78 0.15 158);
+  --verdict-valid-soft: oklch(0.32 0.06 158);
+  --verdict-skipped: oklch(0.72 0.02 255);
+  --verdict-skipped-soft: oklch(0.3 0.012 255);
+  --verdict-quarantined: oklch(0.82 0.14 78);
+  --verdict-quarantined-soft: oklch(0.34 0.07 70);
+  --verdict-blocked: oklch(0.72 0.17 22);
+  --verdict-blocked-soft: oklch(0.33 0.09 22);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-accent: var(--accent);
+
+  --color-verdict-valid: var(--verdict-valid);
+  --color-verdict-valid-soft: var(--verdict-valid-soft);
+  --color-verdict-skipped: var(--verdict-skipped);
+  --color-verdict-skipped-soft: var(--verdict-skipped-soft);
+  --color-verdict-quarantined: var(--verdict-quarantined);
+  --color-verdict-quarantined-soft: var(--verdict-quarantined-soft);
+  --color-verdict-blocked: var(--verdict-blocked);
+  --color-verdict-blocked-soft: var(--verdict-blocked-soft);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", Menlo, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}

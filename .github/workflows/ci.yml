@@ -43,3 +43,28 @@ jobs:
         run: atlaspatch-conduct --version
       - name: Run the no-GPU orchestrator test suite
         run: pytest tests/conductor -q
+
+  web:
+    # Build and test the static React observability GUI (design D-REACT-6). Node-only; runs
+    # independent of the Python `app` job so neither toolchain taints the other. Slice A wires
+    # npm ci -> vitest -> vite build; Slice C adds the Playwright DOM guardrails and the
+    # build-and-diff staleness gate over the vendored web_dist/.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+      - name: Install web dependencies (locked)
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit + render tests (Vitest)
+        run: npx vitest run
+      - name: Build the static bundle
+        run: npx vite build
