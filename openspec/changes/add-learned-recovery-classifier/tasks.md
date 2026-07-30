@@ -34,8 +34,8 @@
 
 ## 7. Model Card + docs
 
-- [ ] 7.1 Update `MODEL_CARD.md`: revise the "no trained model on the decision path" statement to describe the optional learned classifier (operational-only features, determinism, abstention floor, non-SaMD boundary), so the card-sync CI check passes.
-- [ ] 7.2 Add a short `atlas_conductor/classifier` usage note to the docs/README covering `train-classifier`/`eval-classifier` and the `--classifier`/`classifier:` selection, emphasizing the rule default.
+- [x] 7.1 Update `MODEL_CARD.md`: revise the "no trained model on the decision path" statement to describe the optional learned classifier (operational-only features, determinism, abstention floor, non-SaMD boundary), so the card-sync CI check passes.
+- [x] 7.2 Add a short `atlas_conductor/classifier` usage note to the docs/README covering `train-classifier`/`eval-classifier` and the `--classifier`/`classifier:` selection, emphasizing the rule default.
 
 ## 8. Validation
 
