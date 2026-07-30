@@ -16,9 +16,9 @@
 
 ## 4. LearnedClassifier + safety floor (D-LRC-4)
 
-- [ ] 4.1 Add `classifier/learned.py`: `LearnedClassifier(model, fallback=RuleClassifier(), threshold)` implementing the seam — feature-extract, softmax, and return the learned class only when it passes both gates.
-- [ ] 4.2 Implement the confidence gate (below threshold → abstain to fallback, `abstained=True`, learned signature preserved) and the monotone-safety gate (permissiveness-rank map; never exceed the rule class's rank when the rule class is blocking).
-- [ ] 4.3 Add tests: low-confidence abstains to the rule result; a model forced to predict a retry class for a rule-`precondition-block`/`unknown` input still yields a blocking classification (never a retry).
+- [x] 4.1 Add `classifier/learned.py`: `LearnedClassifier(model, fallback=RuleClassifier(), threshold)` implementing the seam — feature-extract, softmax, and return the learned class only when it passes both gates.
+- [x] 4.2 Implement the confidence gate (below threshold → abstain to fallback, `abstained=True`, learned signature preserved) and the monotone-safety gate (permissiveness-rank map; never exceed the rule class's rank when the rule class is blocking).
+- [x] 4.3 Add tests: low-confidence abstains to the rule result; a model forced to predict a retry class for a rule-`precondition-block`/`unknown` input still yields a blocking classification (never a retry).
 
 ## 5. Dataset reader, train + eval (D-LRC-5)
 
