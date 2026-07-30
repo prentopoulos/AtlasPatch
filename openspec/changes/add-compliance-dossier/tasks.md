@@ -10,17 +10,17 @@
 
 ## 2. The dossier document (compliance-dossier)
 
-- [ ] 2.1 Author `COMPLIANCE.md` at the repo root: the non-SaMD risk-tier determination up front, the
+- [x] 2.1 Author `COMPLIANCE.md` at the repo root: the non-SaMD risk-tier determination up front, the
   honest non-certification scope statement (restating Model Card §6, D-CMP-6), and the obligation→control
   →evidence tables rendered from the register rows, grouped by framework.
 
 ## 3. CI drift + traceability check (D-CMP-2)
 
-- [ ] 3.1 Add `compliance/check.py` with `check_compliance(registry_path, dossier_path, test_root)`:
+- [x] 3.1 Add `compliance/check.py` with `check_compliance(registry_path, dossier_path, test_root)`:
   resolve every `evidence_module` path, assert every `evidence_test` node exists/collectable in the test
   tree, assert no `(to confirm)`-style placeholder in `COMPLIANCE.md`, and assert every register row
   appears in the dossier.
-- [ ] 3.2 Add `tests/conductor/test_compliance_dossier.py` invoking `check_compliance` over the shipped
+- [x] 3.2 Add `tests/conductor/test_compliance_dossier.py` invoking `check_compliance` over the shipped
   register + dossier (passes), plus negative cases: a citation to a missing module fails, a placeholder
   in a temp dossier fails, and a register row absent from a temp dossier fails.
 
