@@ -1,0 +1,10 @@
+# Force the React SPA sources (which `vite build` reads) to LF in the index AND the working
+# tree on every platform, so a Windows checkout and a Linux CI checkout build byte-identical
+# output. Without this, autocrlf gives a local CRLF working tree and the vendored bundle drifts
+# from CI's LF build (design D-REACT-5).
+web/** text=auto eol=lf
+
+# The vendored, prebuilt bundle must be stored byte-for-byte so the CI build-and-diff staleness
+# gate compares like-for-like. Disabling EOL conversion keeps the committed bytes identical to a
+# fresh `vite build`. (Placed after the web/** rule; this path is outside web/ regardless.)
+atlas_conductor/gui/web_dist/** -text

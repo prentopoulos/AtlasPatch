@@ -93,29 +93,48 @@ def run(
     click.echo(build_report(result, telemetry, trace=trace))
 
 
-@cli.command()
-@click.argument(
-    "telemetry_dir",
-    type=click.Path(exists=True, file_okay=False, path_type=Path),
-    required=False,
-)
-def gui(telemetry_dir: Path | None) -> None:
-    """Launch the read-only observability GUI (Streamlit) over a TELEMETRY_DIR.
+def _serve_bundle(directory: Path, port: int, open_browser: bool) -> None:
+    """Serve a static directory over a local HTTP server until interrupted (stdlib only).
 
-    Shells out to ``streamlit run`` as a subprocess so this CLI process never imports
-    ``streamlit`` (the core import graph stays GUI-free — a CI import-guard test enforces
-    it). TELEMETRY_DIR is passed to the app via the ``ATLAS_CONDUCTOR_TELEMETRY_DIR`` env
-    var; if omitted, the app prompts for it in its sidebar.
+    Factored out so the ``gui`` command stays a thin wrapper and the launch is testable
+    without binding a socket. Uses only ``http.server`` — no GUI runtime is imported.
     """
-    import os
-    import subprocess
+    import functools
+    import http.server
+    import socketserver
+    import webbrowser
 
-    app_path = Path(__file__).resolve().parent / "gui" / "app.py"
-    env = os.environ.copy()
-    if telemetry_dir is not None:
-        env["ATLAS_CONDUCTOR_TELEMETRY_DIR"] = str(telemetry_dir)
-    command = [sys.executable, "-m", "streamlit", "run", str(app_path)]
-    raise SystemExit(subprocess.call(command, env=env))
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(directory))
+    with socketserver.TCPServer(("127.0.0.1", port), handler) as httpd:
+        url = f"http://127.0.0.1:{httpd.server_address[1]}/"
+        click.echo(f"Serving the observability GUI at {url}  (Ctrl-C to stop)")
+        if open_browser:
+            webbrowser.open(url)
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            click.echo("\nStopped.")
+
+
+@cli.command()
+@click.option("--port", default=0, show_default="an open port", help="Port to serve on.")
+@click.option("--no-browser", is_flag=True, help="Do not open a browser window.")
+def gui(port: int, no_browser: bool) -> None:
+    """Serve the static, read-only observability GUI from the packaged bundle.
+
+    Serves the prebuilt React bundle vendored in the wheel over a local HTTP server. The GUI
+    renders a bundled demo out of the box; to view a real run, export its snapshot
+    (``atlaspatch-conduct export-report <telemetry_dir> --format json > snapshot.json``) and
+    load it with the in-page file picker or drag-and-drop. Uses only the standard library, so
+    the CLI import graph never pulls in a GUI runtime, and no Node or build step is required.
+    """
+    bundle = Path(__file__).resolve().parent / "gui" / "web_dist"
+    if not (bundle / "index.html").exists():
+        raise SystemExit(
+            "GUI bundle not found. Install a wheel that ships atlas_conductor/gui/web_dist, "
+            "or build it from source with `npm --prefix web ci && npm --prefix web run build`."
+        )
+    _serve_bundle(bundle, port, open_browser=not no_browser)
 
 
 @cli.command(name="export-report")

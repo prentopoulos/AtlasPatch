@@ -1,9 +1,10 @@
 """Import-guard and launch tests for the GUI and the orchestrator backends (tasks 6.4, 6.1).
 
-The core CLI import graph must stay free of every heavy `orchestrator`-extra dependency —
-streamlit (GUI), and the phase-4 distribution backends (the A2A SDK, Google ADK, and the
-BigQuery client) — each of which is imported only inside its own guarded module. The `gui`
-subcommand must launch Streamlit as a subprocess rather than importing it in-process.
+The core CLI import graph must stay free of every heavy `orchestrator`-extra dependency — and,
+since phase 9 retired Streamlit for a static React bundle, free of any GUI runtime at all — plus
+the phase-4 distribution backends (the A2A SDK, Google ADK, and the BigQuery client), each of
+which is imported only inside its own guarded module. The `gui` subcommand serves the vendored
+static bundle over a stdlib HTTP server, importing no GUI runtime in-process.
 """
 
 from __future__ import annotations
@@ -18,8 +19,9 @@ from atlas_conductor import cli as cli_mod
 
 
 def test_importing_the_core_cli_does_not_import_streamlit() -> None:
-    # Run in a clean interpreter: the AppTest suite imports streamlit in this process, so an
-    # in-process check would be meaningless. Mirrors the phase-2 egress/no-array guards.
+    # Streamlit is gone entirely (phase 9), but the guard stays as a regression tripwire: no
+    # code path may reintroduce a GUI runtime into the core import graph. Run in a clean
+    # interpreter, mirroring the phase-2 egress/no-array guards.
     code = (
         "import atlas_conductor.cli, sys; "
         "assert 'streamlit' not in sys.modules, "
@@ -56,25 +58,29 @@ def test_importing_the_core_cli_does_not_import_dvc() -> None:
     subprocess.run([sys.executable, "-c", code], check=True)
 
 
-def test_gui_command_shells_out_to_streamlit(tmp_path: Path, monkeypatch) -> None:
+def test_gui_command_serves_the_vendored_static_bundle(monkeypatch) -> None:
+    # The `gui` command serves the prebuilt bundle over a stdlib HTTP server; it must point the
+    # server at the vendored web_dist/ inside the package and never import a GUI runtime. We
+    # stub the blocking serve helper so the test captures the directory without binding a socket.
     captured: dict[str, object] = {}
 
-    def fake_call(command, env=None):  # type: ignore[no-untyped-def]
-        captured["command"] = command
-        captured["env"] = env
-        return 0
+    def fake_serve(directory: Path, port: int, open_browser: bool) -> None:
+        captured["directory"] = directory
+        captured["port"] = port
+        captured["open_browser"] = open_browser
 
-    monkeypatch.setattr(subprocess, "call", fake_call)
-    tele = tmp_path / "tele"
-    tele.mkdir()
+    monkeypatch.setattr(cli_mod, "_serve_bundle", fake_serve)
 
-    result = CliRunner().invoke(cli_mod.cli, ["gui", str(tele)])
+    bundle = Path(cli_mod.__file__).resolve().parent / "gui" / "web_dist"
+    if not (bundle / "index.html").exists():
+        # Source checkouts may not have built the bundle; the command should say so and exit.
+        result = CliRunner().invoke(cli_mod.cli, ["gui"])
+        assert result.exit_code != 0
+        assert "GUI bundle not found" in result.output
+        return
+
+    result = CliRunner().invoke(cli_mod.cli, ["gui", "--no-browser", "--port", "8123"])
     assert result.exit_code == 0
-
-    command = captured["command"]
-    assert isinstance(command, list)
-    assert "streamlit" in command and "run" in command
-    assert str(command[-1]).endswith("app.py")
-    env = captured["env"]
-    assert isinstance(env, dict)
-    assert env["ATLAS_CONDUCTOR_TELEMETRY_DIR"] == str(tele)
+    assert captured["directory"] == bundle
+    assert captured["port"] == 8123
+    assert captured["open_browser"] is False

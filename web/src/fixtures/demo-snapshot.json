@@ -1,0 +1,630 @@
+{
+  "agents": [
+    "planner",
+    "worker",
+    "validator",
+    "recovery",
+    "scheduler"
+  ],
+  "runs": [
+    {
+      "choreography": {
+        "active": "validator",
+        "lit": {
+          "planner": false,
+          "recovery": false,
+          "scheduler": false,
+          "validator": true,
+          "worker": false
+        },
+        "now_processing": "slide slide_61dba5520988bf07 \u00b7 stage segment",
+        "slide_stem": "slide_61dba5520988bf07",
+        "stage": "segment"
+      },
+      "cohort_size": 8,
+      "counts": {
+        "blocked": 1,
+        "quarantined": 1,
+        "skipped": 1,
+        "valid": 5
+      },
+      "job": {
+        "adapter": "fake",
+        "blocked_count": 1,
+        "cohort_size": 8,
+        "encoders": "",
+        "finished_at": "",
+        "input_dir": "cohort",
+        "job_id": "job-cohort-a",
+        "patch_size": 256,
+        "quarantined_count": 1,
+        "requested_output": "coords",
+        "skipped_count": 1,
+        "started_at": "",
+        "status": "completed",
+        "target_mag": 20,
+        "valid_count": 5
+      },
+      "job_id": "job-cohort-a",
+      "message_flow": {
+        "edges": [
+          {
+            "count": 2,
+            "from_agent": "worker",
+            "last_timestamp": "2026-07-30T09:44:00",
+            "to_agent": "validator"
+          },
+          {
+            "count": 1,
+            "from_agent": "recovery",
+            "last_timestamp": "2026-07-30T09:43:00",
+            "to_agent": "worker"
+          },
+          {
+            "count": 1,
+            "from_agent": "validator",
+            "last_timestamp": "2026-07-30T09:42:00",
+            "to_agent": "recovery"
+          },
+          {
+            "count": 1,
+            "from_agent": "planner",
+            "last_timestamp": "2026-07-30T09:40:00",
+            "to_agent": "worker"
+          }
+        ],
+        "has_flow": true,
+        "latest": [
+          "worker",
+          "validator"
+        ]
+      },
+      "slides": [
+        {
+          "detail": "312 patches at 20x",
+          "outcome": "valid",
+          "reason_code": "valid",
+          "slide_stem": "slide_2b85f1c440ef4b8c",
+          "trace": [
+            {
+              "agent": "scheduler",
+              "detail": "",
+              "event": "reconcile",
+              "job_id": "job-cohort-a",
+              "reason_code": "",
+              "slide_stem": "slide_2b85f1c440ef4b8c",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:04:00"
+            },
+            {
+              "agent": "worker",
+              "detail": "",
+              "event": "dispatch",
+              "job_id": "job-cohort-a",
+              "reason_code": "",
+              "slide_stem": "slide_2b85f1c440ef4b8c",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:05:00"
+            },
+            {
+              "agent": "validator",
+              "detail": "",
+              "event": "verdict",
+              "job_id": "job-cohort-a",
+              "reason_code": "valid",
+              "slide_stem": "slide_2b85f1c440ef4b8c",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:06:00"
+            }
+          ]
+        },
+        {
+          "detail": "below tissue-fraction threshold",
+          "outcome": "skipped",
+          "reason_code": "non_tissue_skip",
+          "slide_stem": "slide_58d7cf4a22104615",
+          "trace": [
+            {
+              "agent": "scheduler",
+              "detail": "",
+              "event": "reconcile",
+              "job_id": "job-cohort-a",
+              "reason_code": "",
+              "slide_stem": "slide_58d7cf4a22104615",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:16:00"
+            },
+            {
+              "agent": "worker",
+              "detail": "",
+              "event": "dispatch",
+              "job_id": "job-cohort-a",
+              "reason_code": "",
+              "slide_stem": "slide_58d7cf4a22104615",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:17:00"
+            },
+            {
+              "agent": "validator",
+              "detail": "",
+              "event": "verdict",
+              "job_id": "job-cohort-a",
+              "reason_code": "non_tissue_skip",
+              "slide_stem": "slide_58d7cf4a22104615",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:18:00"
+            },
+            {
+              "agent": "recovery",
+              "detail": "",
+              "event": "recover",
+              "job_id": "job-cohort-a",
+              "reason_code": "non_tissue_skip",
+              "slide_stem": "slide_58d7cf4a22104615",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:19:00"
+            }
+          ]
+        },
+        {
+          "detail": "HITL gate: would overwrite existing output",
+          "outcome": "blocked",
+          "reason_code": "irreversible_blocked",
+          "slide_stem": "slide_61dba5520988bf07",
+          "trace": [
+            {
+              "agent": "scheduler",
+              "detail": "",
+              "event": "reconcile",
+              "job_id": "job-cohort-a",
+              "reason_code": "",
+              "slide_stem": "slide_61dba5520988bf07",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:24:00"
+            },
+            {
+              "agent": "worker",
+              "detail": "",
+              "event": "dispatch",
+              "job_id": "job-cohort-a",
+              "reason_code": "",
+              "slide_stem": "slide_61dba5520988bf07",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:25:00"
+            },
+            {
+              "agent": "validator",
+              "detail": "",
+              "event": "verdict",
+              "job_id": "job-cohort-a",
+              "reason_code": "irreversible_blocked",
+              "slide_stem": "slide_61dba5520988bf07",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:26:00"
+            },
+            {
+              "agent": "validator",
+              "detail": "",
+              "event": "blocked",
+              "job_id": "job-cohort-a",
+              "reason_code": "irreversible_blocked",
+              "slide_stem": "slide_61dba5520988bf07",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:27:00"
+            }
+          ]
+        },
+        {
+          "detail": "312 patches at 20x",
+          "outcome": "valid",
+          "reason_code": "valid",
+          "slide_stem": "slide_9b9f0e678fb5bbb7",
+          "trace": [
+            {
+              "agent": "scheduler",
+              "detail": "",
+              "event": "reconcile",
+              "job_id": "job-cohort-a",
+              "reason_code": "",
+              "slide_stem": "slide_9b9f0e678fb5bbb7",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:01:00"
+            },
+            {
+              "agent": "worker",
+              "detail": "",
+              "event": "dispatch",
+              "job_id": "job-cohort-a",
+              "reason_code": "",
+              "slide_stem": "slide_9b9f0e678fb5bbb7",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:02:00"
+            },
+            {
+              "agent": "validator",
+              "detail": "",
+              "event": "verdict",
+              "job_id": "job-cohort-a",
+              "reason_code": "valid",
+              "slide_stem": "slide_9b9f0e678fb5bbb7",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:03:00"
+            }
+          ]
+        },
+        {
+          "detail": "312 patches at 20x",
+          "outcome": "valid",
+          "reason_code": "valid",
+          "slide_stem": "slide_a95056839bb50ad1",
+          "trace": [
+            {
+              "agent": "scheduler",
+              "detail": "",
+              "event": "reconcile",
+              "job_id": "job-cohort-a",
+              "reason_code": "",
+              "slide_stem": "slide_a95056839bb50ad1",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:13:00"
+            },
+            {
+              "agent": "worker",
+              "detail": "",
+              "event": "dispatch",
+              "job_id": "job-cohort-a",
+              "reason_code": "",
+              "slide_stem": "slide_a95056839bb50ad1",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:14:00"
+            },
+            {
+              "agent": "validator",
+              "detail": "",
+              "event": "verdict",
+              "job_id": "job-cohort-a",
+              "reason_code": "valid",
+              "slide_stem": "slide_a95056839bb50ad1",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:15:00"
+            }
+          ]
+        },
+        {
+          "detail": "0 patches \u2014 empty coordinate set",
+          "outcome": "quarantined",
+          "reason_code": "empty_h5",
+          "slide_stem": "slide_c1837282cedb379b",
+          "trace": [
+            {
+              "agent": "scheduler",
+              "detail": "",
+              "event": "reconcile",
+              "job_id": "job-cohort-a",
+              "reason_code": "",
+              "slide_stem": "slide_c1837282cedb379b",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:20:00"
+            },
+            {
+              "agent": "worker",
+              "detail": "",
+              "event": "dispatch",
+              "job_id": "job-cohort-a",
+              "reason_code": "",
+              "slide_stem": "slide_c1837282cedb379b",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:21:00"
+            },
+            {
+              "agent": "validator",
+              "detail": "",
+              "event": "verdict",
+              "job_id": "job-cohort-a",
+              "reason_code": "empty_h5",
+              "slide_stem": "slide_c1837282cedb379b",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:22:00"
+            },
+            {
+              "agent": "recovery",
+              "detail": "",
+              "event": "recover",
+              "job_id": "job-cohort-a",
+              "reason_code": "empty_h5",
+              "slide_stem": "slide_c1837282cedb379b",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:23:00"
+            }
+          ]
+        },
+        {
+          "detail": "312 patches at 20x",
+          "outcome": "valid",
+          "reason_code": "valid",
+          "slide_stem": "slide_db366840f16a6a76",
+          "trace": [
+            {
+              "agent": "scheduler",
+              "detail": "",
+              "event": "reconcile",
+              "job_id": "job-cohort-a",
+              "reason_code": "",
+              "slide_stem": "slide_db366840f16a6a76",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:10:00"
+            },
+            {
+              "agent": "worker",
+              "detail": "",
+              "event": "dispatch",
+              "job_id": "job-cohort-a",
+              "reason_code": "",
+              "slide_stem": "slide_db366840f16a6a76",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:11:00"
+            },
+            {
+              "agent": "validator",
+              "detail": "",
+              "event": "verdict",
+              "job_id": "job-cohort-a",
+              "reason_code": "valid",
+              "slide_stem": "slide_db366840f16a6a76",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:12:00"
+            }
+          ]
+        },
+        {
+          "detail": "312 patches at 20x",
+          "outcome": "valid",
+          "reason_code": "valid",
+          "slide_stem": "slide_ef8a0a9297516a97",
+          "trace": [
+            {
+              "agent": "scheduler",
+              "detail": "",
+              "event": "reconcile",
+              "job_id": "job-cohort-a",
+              "reason_code": "",
+              "slide_stem": "slide_ef8a0a9297516a97",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:07:00"
+            },
+            {
+              "agent": "worker",
+              "detail": "",
+              "event": "dispatch",
+              "job_id": "job-cohort-a",
+              "reason_code": "",
+              "slide_stem": "slide_ef8a0a9297516a97",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:08:00"
+            },
+            {
+              "agent": "validator",
+              "detail": "",
+              "event": "verdict",
+              "job_id": "job-cohort-a",
+              "reason_code": "valid",
+              "slide_stem": "slide_ef8a0a9297516a97",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:09:00"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "choreography": {
+        "active": "recovery",
+        "lit": {
+          "planner": false,
+          "recovery": true,
+          "scheduler": false,
+          "validator": false,
+          "worker": false
+        },
+        "now_processing": "slide slide_b1df636d08d8498e \u00b7 stage segment",
+        "slide_stem": "slide_b1df636d08d8498e",
+        "stage": "segment"
+      },
+      "cohort_size": 4,
+      "counts": {
+        "blocked": 0,
+        "quarantined": 1,
+        "skipped": 0,
+        "valid": 3
+      },
+      "job": {
+        "adapter": "fake",
+        "blocked_count": 0,
+        "cohort_size": 4,
+        "encoders": "",
+        "finished_at": "",
+        "input_dir": "cohort",
+        "job_id": "job-cohort-b",
+        "patch_size": 256,
+        "quarantined_count": 1,
+        "requested_output": "coords",
+        "skipped_count": 0,
+        "started_at": "",
+        "status": "completed",
+        "target_mag": 20,
+        "valid_count": 3
+      },
+      "job_id": "job-cohort-b",
+      "message_flow": {
+        "edges": [],
+        "has_flow": false,
+        "latest": null
+      },
+      "slides": [
+        {
+          "detail": "312 patches at 20x",
+          "outcome": "valid",
+          "reason_code": "valid",
+          "slide_stem": "slide_1d837bee4bb413f5",
+          "trace": [
+            {
+              "agent": "scheduler",
+              "detail": "",
+              "event": "reconcile",
+              "job_id": "job-cohort-b",
+              "reason_code": "",
+              "slide_stem": "slide_1d837bee4bb413f5",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:01:00"
+            },
+            {
+              "agent": "worker",
+              "detail": "",
+              "event": "dispatch",
+              "job_id": "job-cohort-b",
+              "reason_code": "",
+              "slide_stem": "slide_1d837bee4bb413f5",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:02:00"
+            },
+            {
+              "agent": "validator",
+              "detail": "",
+              "event": "verdict",
+              "job_id": "job-cohort-b",
+              "reason_code": "valid",
+              "slide_stem": "slide_1d837bee4bb413f5",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:03:00"
+            }
+          ]
+        },
+        {
+          "detail": "312 patches at 20x",
+          "outcome": "valid",
+          "reason_code": "valid",
+          "slide_stem": "slide_1f6e40d0ef479005",
+          "trace": [
+            {
+              "agent": "scheduler",
+              "detail": "",
+              "event": "reconcile",
+              "job_id": "job-cohort-b",
+              "reason_code": "",
+              "slide_stem": "slide_1f6e40d0ef479005",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:04:00"
+            },
+            {
+              "agent": "worker",
+              "detail": "",
+              "event": "dispatch",
+              "job_id": "job-cohort-b",
+              "reason_code": "",
+              "slide_stem": "slide_1f6e40d0ef479005",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:05:00"
+            },
+            {
+              "agent": "validator",
+              "detail": "",
+              "event": "verdict",
+              "job_id": "job-cohort-b",
+              "reason_code": "valid",
+              "slide_stem": "slide_1f6e40d0ef479005",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:06:00"
+            }
+          ]
+        },
+        {
+          "detail": "312 patches at 20x",
+          "outcome": "valid",
+          "reason_code": "valid",
+          "slide_stem": "slide_a8d975b76aee759e",
+          "trace": [
+            {
+              "agent": "scheduler",
+              "detail": "",
+              "event": "reconcile",
+              "job_id": "job-cohort-b",
+              "reason_code": "",
+              "slide_stem": "slide_a8d975b76aee759e",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:07:00"
+            },
+            {
+              "agent": "worker",
+              "detail": "",
+              "event": "dispatch",
+              "job_id": "job-cohort-b",
+              "reason_code": "",
+              "slide_stem": "slide_a8d975b76aee759e",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:08:00"
+            },
+            {
+              "agent": "validator",
+              "detail": "",
+              "event": "verdict",
+              "job_id": "job-cohort-b",
+              "reason_code": "valid",
+              "slide_stem": "slide_a8d975b76aee759e",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:09:00"
+            }
+          ]
+        },
+        {
+          "detail": "0 patches \u2014 empty coordinate set",
+          "outcome": "quarantined",
+          "reason_code": "empty_h5",
+          "slide_stem": "slide_b1df636d08d8498e",
+          "trace": [
+            {
+              "agent": "scheduler",
+              "detail": "",
+              "event": "reconcile",
+              "job_id": "job-cohort-b",
+              "reason_code": "",
+              "slide_stem": "slide_b1df636d08d8498e",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:10:00"
+            },
+            {
+              "agent": "worker",
+              "detail": "",
+              "event": "dispatch",
+              "job_id": "job-cohort-b",
+              "reason_code": "",
+              "slide_stem": "slide_b1df636d08d8498e",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:11:00"
+            },
+            {
+              "agent": "validator",
+              "detail": "",
+              "event": "verdict",
+              "job_id": "job-cohort-b",
+              "reason_code": "empty_h5",
+              "slide_stem": "slide_b1df636d08d8498e",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:12:00"
+            },
+            {
+              "agent": "recovery",
+              "detail": "",
+              "event": "recover",
+              "job_id": "job-cohort-b",
+              "reason_code": "empty_h5",
+              "slide_stem": "slide_b1df636d08d8498e",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:13:00"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "schema_version": 1
+}

@@ -1,11 +1,5 @@
-# observability-gui Specification
+## MODIFIED Requirements
 
-## Purpose
-The read-only observability surface for the conductor: a static React SPA that renders the
-frozen `gui-snapshot` payload assembled from the PHI-free telemetry — run history, per-slide
-structural verdicts, decision trace, cohort metrics, and Level-1/Level-2 agent choreography —
-without importing the ML pipeline, rendering slide pixels, or displaying any clinical score.
-## Requirements
 ### Requirement: Read-only renderer over telemetry
 The GUI SHALL be a read-only observability surface rendering the frozen `gui-snapshot` payload.
 It SHALL obtain a run's state from a point-in-time snapshot (the versioned payload assembled from
@@ -64,6 +58,8 @@ The per-slide verdict panel SHALL be sortable and the decision trace SHALL rende
 #### Scenario: Empty snapshot renders without error
 - **WHEN** a snapshot with an empty set of runs is loaded
 - **THEN** the GUI renders an empty state and raises no error
+
+## ADDED Requirements
 
 ### Requirement: Pins the snapshot schema version
 The GUI SHALL pin the `gui-snapshot` `SNAPSHOT_SCHEMA_VERSION` it was built against and SHALL

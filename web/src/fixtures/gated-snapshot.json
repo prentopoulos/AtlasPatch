@@ -1,0 +1,221 @@
+{
+  "agents": [
+    "planner",
+    "worker",
+    "validator",
+    "recovery",
+    "scheduler"
+  ],
+  "runs": [
+    {
+      "choreography": {
+        "active": "validator",
+        "lit": {
+          "planner": false,
+          "recovery": false,
+          "scheduler": false,
+          "validator": true,
+          "worker": false
+        },
+        "now_processing": "slide slide_cea5feda1f58620a \u00b7 stage segment",
+        "slide_stem": "slide_cea5feda1f58620a",
+        "stage": "segment"
+      },
+      "cohort_size": 3,
+      "counts": {
+        "blocked": 1,
+        "quarantined": 1,
+        "skipped": 0,
+        "valid": 1
+      },
+      "job": {
+        "adapter": "fake",
+        "blocked_count": 1,
+        "cohort_size": 3,
+        "encoders": "",
+        "finished_at": "",
+        "input_dir": "cohort",
+        "job_id": "job-gated",
+        "patch_size": 256,
+        "quarantined_count": 1,
+        "requested_output": "coords",
+        "skipped_count": 0,
+        "started_at": "",
+        "status": "completed",
+        "target_mag": 20,
+        "valid_count": 1
+      },
+      "job_id": "job-gated",
+      "message_flow": {
+        "edges": [
+          {
+            "count": 2,
+            "from_agent": "worker",
+            "last_timestamp": "2026-07-30T09:44:00",
+            "to_agent": "validator"
+          },
+          {
+            "count": 1,
+            "from_agent": "recovery",
+            "last_timestamp": "2026-07-30T09:43:00",
+            "to_agent": "worker"
+          },
+          {
+            "count": 1,
+            "from_agent": "validator",
+            "last_timestamp": "2026-07-30T09:42:00",
+            "to_agent": "recovery"
+          },
+          {
+            "count": 1,
+            "from_agent": "planner",
+            "last_timestamp": "2026-07-30T09:40:00",
+            "to_agent": "worker"
+          }
+        ],
+        "has_flow": true,
+        "latest": [
+          "worker",
+          "validator"
+        ]
+      },
+      "slides": [
+        {
+          "detail": "312 patches at 20x",
+          "outcome": "valid",
+          "reason_code": "valid",
+          "slide_stem": "slide_a5b99808f3b744bc",
+          "trace": [
+            {
+              "agent": "scheduler",
+              "detail": "",
+              "event": "reconcile",
+              "job_id": "job-gated",
+              "reason_code": "",
+              "slide_stem": "slide_a5b99808f3b744bc",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:01:00"
+            },
+            {
+              "agent": "worker",
+              "detail": "",
+              "event": "dispatch",
+              "job_id": "job-gated",
+              "reason_code": "",
+              "slide_stem": "slide_a5b99808f3b744bc",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:02:00"
+            },
+            {
+              "agent": "validator",
+              "detail": "",
+              "event": "verdict",
+              "job_id": "job-gated",
+              "reason_code": "valid",
+              "slide_stem": "slide_a5b99808f3b744bc",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:03:00"
+            }
+          ]
+        },
+        {
+          "detail": "HITL gate: would overwrite existing output",
+          "outcome": "blocked",
+          "reason_code": "irreversible_blocked",
+          "slide_stem": "slide_cea5feda1f58620a",
+          "trace": [
+            {
+              "agent": "scheduler",
+              "detail": "",
+              "event": "reconcile",
+              "job_id": "job-gated",
+              "reason_code": "",
+              "slide_stem": "slide_cea5feda1f58620a",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:08:00"
+            },
+            {
+              "agent": "worker",
+              "detail": "",
+              "event": "dispatch",
+              "job_id": "job-gated",
+              "reason_code": "",
+              "slide_stem": "slide_cea5feda1f58620a",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:09:00"
+            },
+            {
+              "agent": "validator",
+              "detail": "",
+              "event": "verdict",
+              "job_id": "job-gated",
+              "reason_code": "irreversible_blocked",
+              "slide_stem": "slide_cea5feda1f58620a",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:10:00"
+            },
+            {
+              "agent": "validator",
+              "detail": "",
+              "event": "blocked",
+              "job_id": "job-gated",
+              "reason_code": "irreversible_blocked",
+              "slide_stem": "slide_cea5feda1f58620a",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:11:00"
+            }
+          ]
+        },
+        {
+          "detail": "0 patches \u2014 empty coordinate set",
+          "outcome": "quarantined",
+          "reason_code": "empty_h5",
+          "slide_stem": "slide_f3445c6988ecee4c",
+          "trace": [
+            {
+              "agent": "scheduler",
+              "detail": "",
+              "event": "reconcile",
+              "job_id": "job-gated",
+              "reason_code": "",
+              "slide_stem": "slide_f3445c6988ecee4c",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:04:00"
+            },
+            {
+              "agent": "worker",
+              "detail": "",
+              "event": "dispatch",
+              "job_id": "job-gated",
+              "reason_code": "",
+              "slide_stem": "slide_f3445c6988ecee4c",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:05:00"
+            },
+            {
+              "agent": "validator",
+              "detail": "",
+              "event": "verdict",
+              "job_id": "job-gated",
+              "reason_code": "empty_h5",
+              "slide_stem": "slide_f3445c6988ecee4c",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:06:00"
+            },
+            {
+              "agent": "recovery",
+              "detail": "",
+              "event": "recover",
+              "job_id": "job-gated",
+              "reason_code": "empty_h5",
+              "slide_stem": "slide_f3445c6988ecee4c",
+              "stage": "segment",
+              "timestamp": "2026-07-30T09:07:00"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "schema_version": 1
+}
