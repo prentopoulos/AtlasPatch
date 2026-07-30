@@ -46,9 +46,9 @@
 
 ## 6. Model Card + docs (D-CMP-6)
 
-- [ ] 6.1 Update `MODEL_CARD.md` §10: flip the EU AI Act / ISO 42001 dossier line from "still planned"
+- [x] 6.1 Update `MODEL_CARD.md` §10: flip the EU AI Act / ISO 42001 dossier line from "still planned"
   to "delivered", pointing at `COMPLIANCE.md`; confirm the card's drift-check still passes.
-- [ ] 6.2 Add a short `export-dossier` usage note to the docs/README (alongside `export-report`),
+- [x] 6.2 Add a short `export-dossier` usage note to the docs/README (alongside `export-report`),
   covering the evidence bundle and the `COMPLIANCE.md`/control-register pairing.
 
 ## 7. Validation
