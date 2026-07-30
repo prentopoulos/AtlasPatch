@@ -53,6 +53,6 @@
 
 ## 7. Validation
 
-- [ ] 7.1 Run `openspec validate add-compliance-dossier --strict`, the full test suite, and ruff;
+- [x] 7.1 Run `openspec validate add-compliance-dossier --strict`, the full test suite, and ruff;
   confirm the phase adds no new runtime dependency and both the compliance check and the existing
   model-card check are green in CI.

@@ -81,7 +81,7 @@ class RunEvidence:
     @property
     def decision_counts(self) -> dict[str, int]:
         """A per-action tally of this run's governance decisions (all actions present)."""
-        counts = {action: 0 for action in _DECISION_ACTIONS}
+        counts = dict.fromkeys(_DECISION_ACTIONS, 0)
         for decision in self.governance_decisions:
             if decision.action in counts:
                 counts[decision.action] += 1
