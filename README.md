@@ -579,6 +579,25 @@ atlaspatch-conduct export-report <output_dir>/telemetry --format json
 `streamlit` ships in the `orchestrator` extra and is imported only by the GUI, so
 `pip install atlas-patch` and the core `atlaspatch` CLI stay GUI-free.
 
+### Compliance dossier and per-run evidence
+
+The maintained **[compliance dossier](COMPLIANCE.md)** positions the layer against the **EU
+AI Act** (Annex IV technical documentation) and **ISO/IEC 42001**, mapping each applicable
+obligation to an implemented control and the CI test that enforces it, under a documented
+non-SaMD risk-tier determination. The mapping lives in a machine-checkable control register
+(`atlas_conductor/compliance/controls.yaml`) that CI keeps in sync with the code — every cited
+module/test must resolve and every row must appear in the dossier. It documents **verifiable
+technical safeguards**, not a legal certification.
+
+For a specific completed run, `export-dossier` emits a PHI-free **evidence bundle** — the audit
+chain re-verified (reported broken if the trail was tampered with), the run's HITL
+holds/approvals/waivers and telemetry-gate rejections, the per-slide outcomes and cohort counts,
+and the control-register summary — from the same read path as `export-report`:
+
+```bash
+atlaspatch-conduct export-dossier <output_dir>/telemetry --format json   # or html
+```
+
 ### Distributed agent choreography (A2A)
 
 By default the four logical agents (planner, worker, validator, recovery) run as plain

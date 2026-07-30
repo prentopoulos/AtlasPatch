@@ -1,0 +1,147 @@
+# Control register for the atlas_conductor compliance dossier (design D-CMP-1).
+#
+# This is the SINGLE SOURCE OF TRUTH for COMPLIANCE.md's obligation->control->evidence map.
+# CI (tests/conductor/test_compliance_dossier.py, design D-CMP-2) resolves every
+# evidence_module path and evidence_test node here, forbids authoring placeholders in the
+# rendered dossier, and asserts every row below appears in COMPLIANCE.md. Edit a row here
+# and the dossier must reflect it, or the build fails.
+#
+# Mappings are interpretive: the EU AI Act Annex IV elements and ISO/IEC 42001 clauses do
+# not map 1:1 onto an operational, non-SaMD orchestrator. Each row records an *applicable*
+# obligation under the documented non-high-risk determination; the register does not claim
+# exhaustive coverage or legal conformity (see COMPLIANCE.md scope statement).
+
+controls:
+  # --- EU AI Act — Annex IV technical-documentation elements ---------------------------
+  - id: EU-AIA-01
+    framework: eu-ai-act
+    clause: "Annex IV §1 — general description & intended purpose"
+    obligation: >-
+      Document what the system is and its intended purpose.
+    control: >-
+      The maintained System/Model Card describes the orchestrator (planner/worker/validator/
+      recovery over the existing CLI + HDF5) and its operational, non-diagnostic intended use.
+    evidence_module: MODEL_CARD.md
+    evidence_test: tests/conductor/test_governance_model_card.py::test_model_card_exists
+
+  - id: EU-AIA-02
+    framework: eu-ai-act
+    clause: "Annex IV §1 — risk-tier determination (non-SaMD scope boundary)"
+    obligation: >-
+      State the system's risk classification and the boundary that fixes it.
+    control: >-
+      The card records the non-SaMD, operational-only determination that places the system
+      outside high-risk / medical-device scope, so the obligations that attach are limited.
+    evidence_module: MODEL_CARD.md
+    evidence_test: tests/conductor/test_governance_model_card.py::test_model_card_states_the_non_samd_boundary
+
+  - id: EU-AIA-03
+    framework: eu-ai-act
+    clause: "Annex IV §2(g) / Art. 10 — data governance"
+    obligation: >-
+      Govern the data the system records; keep personal/clinical identifiers out.
+    control: >-
+      The PHI-free write-gate pseudonymizes slide stems and rejects any record whose free-text
+      matches a HIPAA Safe-Harbor identifier shape, fail-closed, before anything is persisted.
+    evidence_module: atlas_conductor/governance/gate.py
+    evidence_test: tests/conductor/test_governance_phi.py::test_phi_laden_stem_injected_via_run_never_reaches_the_store
+
+  - id: EU-AIA-04
+    framework: eu-ai-act
+    clause: "Annex IV §2(e) / Art. 14 — human oversight"
+    obligation: >-
+      Ensure a human can oversee and intervene on consequential actions.
+    control: >-
+      The HITL gate holds every irreversible/expensive recovery action for human confirmation
+      in an attended run; an unattended run must explicitly waive, and the waiver is recorded.
+    evidence_module: atlas_conductor/governance/hitl.py
+    evidence_test: tests/conductor/test_governance_hitl.py::test_force_reprocess_is_held_in_an_attended_run
+
+  - id: EU-AIA-05
+    framework: eu-ai-act
+    clause: "Annex IV §3 / Art. 15 — accuracy & robustness"
+    obligation: >-
+      Make the decision behaviour accurate and robust for its purpose.
+    control: >-
+      The decision core is deterministic: a default run routes recovery through hand-written
+      rules (no learned model in the path), so its behaviour is reproducible and inspectable.
+    evidence_module: atlas_conductor/scheduler.py
+    evidence_test: tests/conductor/test_classifier_seam.py::test_default_scheduler_routes_through_the_rules
+
+  - id: EU-AIA-06
+    framework: eu-ai-act
+    clause: "Annex IV §2(g) / Art. 12 — record-keeping & logging"
+    obligation: >-
+      Automatically log events over the system's lifecycle in a tamper-evident way.
+    control: >-
+      Every consequential action is appended to a hash-chained audit trail; any post-hoc edit,
+      reorder, or deletion breaks the chain and is detected by verify_audit_chain.
+    evidence_module: atlas_conductor/governance/audit.py
+    evidence_test: tests/conductor/test_governance_audit.py::test_edited_entry_is_detected_at_the_right_link
+
+  - id: EU-AIA-07
+    framework: eu-ai-act
+    clause: "Annex IV §2(b) / Art. 15 — robustness (no data egress)"
+    obligation: >-
+      Contain the system's outputs; do not leak pixels or personal data off-box.
+    control: >-
+      Telemetry/audit record types are scalar-only (no array can hold a pixel/mask/embedding),
+      and a core run opens no unexpected network connection.
+    evidence_module: atlas_conductor/telemetry.py
+    evidence_test: tests/conductor/test_governance_phi.py::test_no_telemetry_or_audit_field_can_hold_an_array
+
+  # --- ISO/IEC 42001 — AI-management-system clauses / Annex A controls ------------------
+  - id: ISO-42001-01
+    framework: iso-42001
+    clause: "Clause 7.5 / A.3.2 — documented information (system documentation)"
+    obligation: >-
+      Maintain documented information describing the AI system and its management.
+    control: >-
+      The System/Model Card is a governed, version-controlled document with a CI drift-check
+      that forbids unresolved authoring placeholders.
+    evidence_module: MODEL_CARD.md
+    evidence_test: tests/conductor/test_governance_model_card.py::test_model_card_has_no_unresolved_placeholder
+
+  - id: ISO-42001-02
+    framework: iso-42001
+    clause: "Clause 6.1 / A.5.2 — AI risk assessment"
+    obligation: >-
+      Identify AI-specific risks and their mitigations, proportionate to impact.
+    control: >-
+      The card enumerates known risks and mitigations under an explicit non-SaMD determination
+      that bounds the applicable risk surface.
+    evidence_module: MODEL_CARD.md
+    evidence_test: tests/conductor/test_governance_model_card.py::test_model_card_states_the_non_samd_boundary
+
+  - id: ISO-42001-03
+    framework: iso-42001
+    clause: "A.7.4 — data quality & governance for AI systems"
+    obligation: >-
+      Govern data used and produced by the AI system, including sensitive data.
+    control: >-
+      The PHI-free gate rejects a Safe-Harbor identifier surfacing in a free-text detail field,
+      fail-closed, so identifiers never enter the persisted records.
+    evidence_module: atlas_conductor/governance/phi.py
+    evidence_test: tests/conductor/test_governance_phi.py::test_identifier_in_detail_field_is_rejected_fail_closed
+
+  - id: ISO-42001-04
+    framework: iso-42001
+    clause: "A.9.2 — human oversight of the AI system"
+    obligation: >-
+      Provide for human oversight and a recorded decision on autonomous actions.
+    control: >-
+      An unattended run waives HITL confirmation only explicitly, and the waiver is written to
+      the audit trail so the oversight decision is always recoverable.
+    evidence_module: atlas_conductor/governance/hitl.py
+    evidence_test: tests/conductor/test_governance_hitl.py::test_unattended_run_waives_confirmation_and_logs_the_waiver
+
+  - id: ISO-42001-05
+    framework: iso-42001
+    clause: "A.6.2.8 — AI system logging & event recording"
+    obligation: >-
+      Record events during operation so the system's behaviour can be examined later.
+    control: >-
+      The audit trail records each action with a pseudonymized, scalar-only, PHI-free payload
+      and verifies intact on an untampered run.
+    evidence_module: atlas_conductor/governance/audit.py
+    evidence_test: tests/conductor/test_governance_audit.py::test_run_audit_entries_are_pseudonymized_and_phi_free

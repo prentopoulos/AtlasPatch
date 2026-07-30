@@ -157,11 +157,13 @@ tamper-*proofing* (WORM storage / cryptographic signing are out of scope).
 
 ## 10. Deferred (tracked, not dropped)
 
-Delivered since this card was first written: DVC/Git **data lineage** (phase 5) and the optional
-**learned recovery classifier** trained on the telemetry dataset (§4/D14, phase 6). Still planned:
-a full **EU AI Act / ISO 42001** compliance dossier building on this card and the audit trail
-(phase 7), and a richer sklearn-backed learner behind the `orchestrator` extra (deferred; the seam
-and JSON artifact format already admit it).
+Delivered since this card was first written: DVC/Git **data lineage** (phase 5), the optional
+**learned recovery classifier** trained on the telemetry dataset (§4/D14, phase 6), and a full
+**EU AI Act / ISO 42001** compliance dossier building on this card and the audit trail (phase 7) —
+see **[COMPLIANCE.md](COMPLIANCE.md)**, which maps each applicable framework obligation to an
+implemented control and its CI proof and adds a run-scoped `export-dossier` evidence bundle. Still
+planned: a richer sklearn-backed learner behind the `orchestrator` extra (deferred; the seam and
+JSON artifact format already admit it).
 
 ---
 _Template basis: Mitchell et al., "Model Cards for Model Reporting" (2019), adapted for a

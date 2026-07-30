@@ -158,6 +158,7 @@ include = ["atlas_patch*", "atlas_conductor*"]
 
 [tool.setuptools.package-data]
 "atlas_patch" = ["configs/*.yaml"]
+"atlas_conductor.compliance" = ["*.yaml"]
 
 [tool.setuptools.dynamic]
 version = {attr = "atlas_patch.__version__"}

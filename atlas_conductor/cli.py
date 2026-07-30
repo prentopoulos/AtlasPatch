@@ -139,6 +139,31 @@ def export_report_cmd(telemetry_dir: Path, fmt: str) -> None:
     click.echo(export_report(telemetry_dir, fmt=fmt))
 
 
+@cli.command(name="export-dossier")
+@click.argument("telemetry_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option(
+    "--format",
+    "fmt",
+    type=click.Choice(["json", "html"]),
+    default="json",
+    show_default=True,
+    help="The compliance evidence bundle to render (design D-CMP-5).",
+)
+def export_dossier_cmd(telemetry_dir: Path, fmt: str) -> None:
+    """Render a run-scoped compliance evidence bundle from a TELEMETRY_DIR.
+
+    Assembles a PHI-free conformity snapshot — the audit chain verified with
+    ``verify_audit_chain`` (reported broken if the trail was tampered with), the run's HITL
+    holds/approvals/waivers and telemetry-gate rejections, the per-slide operational outcomes
+    and cohort counts, and the control-register summary. Read-only over the same telemetry/audit
+    path the GUI and ``export-report`` use, so it cannot diverge from the report. See
+    ``COMPLIANCE.md`` for the standing dossier the bundle produces per-run evidence for.
+    """
+    from atlas_conductor.compliance.evidence import export_dossier
+
+    click.echo(export_dossier(telemetry_dir, fmt=fmt))
+
+
 @cli.command()
 @click.argument("output_dir", type=click.Path(exists=True, file_okay=False, path_type=Path))
 @click.option(

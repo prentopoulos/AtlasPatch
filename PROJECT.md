@@ -22,7 +22,7 @@ first one below whose status is not Done.
 | 4 | `add-conductor-distribution` | Done | Wire the four logical agents as A2A peers (Google ADK + A2A), add the optional BigQuery telemetry backend, and the GUI Level 2 message-flow view. A2A earns its weight here as watchable choreography (design D8); the core already runs without it. |
 | 5 | `add-conductor-data-lineage` | Done | DVC/Git data-lineage pipeline over the orchestrator's inputs/outputs. Additive layer — no rework of earlier phases. |
 | 6 | `add-learned-recovery-classifier` | Done | Replace the rule-based failure classifier with one learned from the telemetry recovery dataset. The declarative task contract keeps this seam clean. |
-| 7 | `add-compliance-dossier` | Planned | Full EU AI Act / ISO 42001 compliance dossier building on the phase-2 Model Card and audit trail. |
+| 7 | `add-compliance-dossier` | Done | Full EU AI Act / ISO 42001 compliance dossier building on the phase-2 Model Card and audit trail. |
 
 Phases 2–7 are additive follow-ons (design D17 for 2–4, the scope note for 5–7). Each is
 kept out of the phase-1 change to keep it reviewable, falls on a capability-spec boundary,
