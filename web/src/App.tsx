@@ -2,6 +2,10 @@ import { useMemo, useState } from "react";
 import { AlertTriangle, Activity } from "lucide-react";
 import { SnapshotLoader } from "@/components/SnapshotLoader";
 import { RunHistory } from "@/components/RunHistory";
+import { CohortMetrics } from "@/components/CohortMetrics";
+import { VerdictTable } from "@/components/VerdictTable";
+import { DecisionTrace } from "@/components/DecisionTrace";
+import { Choreography } from "@/components/Choreography";
 import {
   SNAPSHOT_SCHEMA_VERSION,
   parseSnapshot,
@@ -106,11 +110,25 @@ export default function App() {
               selectedJobId={selectedRun?.job_id ?? null}
               onSelect={setSelectedJobId}
             />
-            {selectedRun && (
-              <p className="text-xs text-muted-foreground">
-                Showing run{" "}
-                <span className="font-mono text-foreground">{selectedRun.job_id}</span> ·{" "}
-                {selectedRun.cohort_size} slides · source: {view.source}
+            {selectedRun ? (
+              <>
+                <p className="-mt-2 text-xs text-muted-foreground">
+                  Showing run{" "}
+                  <span className="font-mono text-foreground">{selectedRun.job_id}</span> ·{" "}
+                  {selectedRun.cohort_size} slides · source: {view.source}
+                </p>
+                <CohortMetrics run={selectedRun} />
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                  <div className="lg:col-span-2">
+                    <VerdictTable slides={selectedRun.slides} />
+                  </div>
+                  <Choreography run={selectedRun} agents={view.snapshot.agents} />
+                </div>
+                <DecisionTrace slides={selectedRun.slides} />
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                This snapshot contains no runs to display.
               </p>
             )}
           </main>

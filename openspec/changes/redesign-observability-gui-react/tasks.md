@@ -10,12 +10,12 @@
 
 ## 2. Slice B — panels + design system (green in CI)
 
-- [ ] 2.1 Define the semantic verdict token system (Tailwind theme tokens for `valid`/`skipped`/`quarantined`/`blocked`) and reusable verdict `Badge`, used consistently across panels.
-- [ ] 2.2 Build the cohort-metrics KPI stat-tiles (cohort size + valid/skipped/quarantined/blocked tallies) from `counts`.
-- [ ] 2.3 Build the sortable per-slide verdict table (shadcn `Table`) showing pseudonymized stem, structural verdict, reason code, and detail — no score column, sortable by column.
-- [ ] 2.4 Build the decision-trace tree (collapsible) from each slide's `trace`.
-- [ ] 2.5 Build the agent-choreography panel: Level-1 component-state (per-agent active/idle + now-processing) and Level-2 message-flow (directed edges with counts; degrade cleanly to component-state-only when `message_flow` has no flow), driven by the payload's `agents`, `choreography`, and `message_flow`.
-- [ ] 2.6 Add Vitest render tests for each panel (populate from the demo fixture; sorting; trace tree; empty and no-message-flow states).
+- [x] 2.1 Define the semantic verdict token system (Tailwind theme tokens for `valid`/`skipped`/`quarantined`/`blocked`) and reusable verdict `Badge`, used consistently across panels.
+- [x] 2.2 Build the cohort-metrics KPI stat-tiles (cohort size + valid/skipped/quarantined/blocked tallies) from `counts`.
+- [x] 2.3 Build the sortable per-slide verdict table (shadcn `Table`) showing pseudonymized stem, structural verdict, reason code, and detail — no score column, sortable by column.
+- [x] 2.4 Build the decision-trace tree (collapsible) from each slide's `trace`.
+- [x] 2.5 Build the agent-choreography panel: Level-1 component-state (per-agent active/idle + now-processing) and Level-2 message-flow (directed edges with counts; degrade cleanly to component-state-only when `message_flow` has no flow), driven by the payload's `agents`, `choreography`, and `message_flow`.
+- [x] 2.6 Add Vitest render tests for each panel (populate from the demo fixture; sorting; trace tree; empty and no-message-flow states).
 
 ## 3. Slice C — motion, guardrails, vendored dist, Streamlit retirement (green in CI)
 
