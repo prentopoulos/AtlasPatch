@@ -23,9 +23,9 @@ def evaluate(classifier: FailureClassifier, dataset: RecoveryDataset) -> dict[st
     n = len(dataset)
     rule = RuleClassifier()
 
-    tp = {c: 0 for c in CLASSES}  # true positives per class
-    predicted_count = {c: 0 for c in CLASSES}
-    actual_count = {c: 0 for c in CLASSES}
+    tp = dict.fromkeys(CLASSES, 0)  # true positives per class
+    predicted_count = dict.fromkeys(CLASSES, 0)
+    actual_count = dict.fromkeys(CLASSES, 0)
     correct = 0
     should_block = 0
     retried_should_block = 0

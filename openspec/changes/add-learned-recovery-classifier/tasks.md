@@ -39,4 +39,4 @@
 
 ## 8. Validation
 
-- [ ] 8.1 Run `openspec validate add-learned-recovery-classifier --strict` and the full test suite + ruff; confirm the default path adds no new dependency and stays green with the learned path exercised in CI.
+- [x] 8.1 Run `openspec validate add-learned-recovery-classifier --strict` and the full test suite + ruff; confirm the default path adds no new dependency and stays green with the learned path exercised in CI.
