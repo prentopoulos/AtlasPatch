@@ -169,7 +169,11 @@ def _seed_run(
 
 def _write(name: str, payload: dict) -> None:
     path = FIXTURES_DIR / name
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    # Force LF (newline="") so the committed fixtures are byte-identical on Windows and Linux —
+    # the bundle inlines them, so a CRLF here would break the CI build-and-diff staleness gate.
+    text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        handle.write(text)
     print(f"wrote {path.relative_to(Path.cwd())}  ({len(payload['runs'])} run(s))")
 
 
