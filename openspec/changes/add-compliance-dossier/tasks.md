@@ -26,14 +26,14 @@
 
 ## 4. Run-scoped evidence bundle (D-CMP-3, D-CMP-4)
 
-- [ ] 4.1 Add `compliance/evidence.py`: the frozen `EvidenceBundle` and
+- [x] 4.1 Add `compliance/evidence.py`: the frozen `EvidenceBundle` and
   `build_evidence(telemetry_dir) -> EvidenceBundle` — reads runs via `TelemetryReader`/`build_run_views`,
   loads audit entries and records `verify_audit_chain`'s verdict per run, extracts HITL
   holds/approvals/waivers and gate rejections from the audit trail, and attaches the register pass/fail
   summary.
-- [ ] 4.2 Add JSON rendering (canonical, `sort_keys`) and optional self-contained HTML with no `<img>`
+- [x] 4.2 Add JSON rendering (canonical, `sort_keys`) and optional self-contained HTML with no `<img>`
   and no `<script>` (mirroring `gui/export.py`).
-- [ ] 4.3 Add tests: the bundle's per-slide verdicts and cohort counts equal `export-report`'s for the
+- [x] 4.3 Add tests: the bundle's per-slide verdicts and cohort counts equal `export-report`'s for the
   same run (shared-read-path invariant); the bundle reports the chain intact for an untampered trail and
   **broken** when an entry is altered (D-CMP-4); the rendered bundle contains no pixel/array/raw
   identifier (PHI-free).

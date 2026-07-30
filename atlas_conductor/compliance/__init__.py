@@ -17,6 +17,13 @@ GUI and ``export-report`` use (design D-CMP-3).
 
 from __future__ import annotations
 
+from atlas_conductor.compliance.evidence import (
+    EvidenceBundle,
+    build_evidence,
+    export_dossier,
+    render_html,
+    render_json,
+)
 from atlas_conductor.compliance.registry import (
     ControlRow,
     default_registry_path,
@@ -25,6 +32,11 @@ from atlas_conductor.compliance.registry import (
 
 __all__ = [
     "ControlRow",
+    "EvidenceBundle",
+    "build_evidence",
     "default_registry_path",
+    "export_dossier",
     "load_registry",
+    "render_html",
+    "render_json",
 ]
