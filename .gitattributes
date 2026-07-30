@@ -1,0 +1,4 @@
+# The vendored, prebuilt React observability bundle must be stored byte-for-byte so the CI
+# build-and-diff staleness gate (design D-REACT-5) compares like-for-like on every platform.
+# Disabling EOL conversion keeps the committed bytes identical to a fresh `vite build`.
+atlas_conductor/gui/web_dist/** -text

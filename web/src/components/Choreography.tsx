@@ -22,14 +22,15 @@ export function Choreography({ run, agents }: { run: RunView; agents: string[] }
             Level 1 · component state
           </h4>
           <div className="flex flex-wrap gap-2" data-testid="agent-nodes">
-            {agents.map((agent) => {
+            {agents.map((agent, i) => {
               const lit = choreography.lit[agent] ?? false;
               return (
                 <div
                   key={agent}
                   data-active={lit}
+                  style={{ animationDelay: `${i * 45}ms` }}
                   className={cn(
-                    "flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium capitalize transition-colors",
+                    "ap-enter flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium capitalize transition-colors",
                     lit
                       ? "border-ring/50 bg-accent/10 text-foreground"
                       : "border-border bg-muted/30 text-muted-foreground",
@@ -63,7 +64,7 @@ export function Choreography({ run, agents }: { run: RunView; agents: string[] }
             </p>
           ) : (
             <ul className="flex flex-col gap-1.5" data-testid="flow-edges">
-              {message_flow.edges.map((edge) => {
+              {message_flow.edges.map((edge, i) => {
                 const latest =
                   message_flow.latest?.[0] === edge.from_agent &&
                   message_flow.latest?.[1] === edge.to_agent;
@@ -71,8 +72,9 @@ export function Choreography({ run, agents }: { run: RunView; agents: string[] }
                   <li
                     key={`${edge.from_agent}->${edge.to_agent}`}
                     data-latest={latest}
+                    style={{ animationDelay: `${i * 40}ms` }}
                     className={cn(
-                      "flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs",
+                      "ap-enter flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs",
                       latest
                         ? "border-ring/50 bg-accent/10 text-foreground"
                         : "border-border/60 text-muted-foreground",

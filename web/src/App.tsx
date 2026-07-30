@@ -74,8 +74,8 @@ export default function App() {
                 AtlasPatch Conductor — Observability
               </h1>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                Read-only view over the PHI-free snapshot — verdicts, not predictions; decision
-                trace, not saliency; no slide pixels.
+                Read-only view over the PHI-free snapshot — structural verdicts with reason
+                codes, the decision trace, and no slide pixels.
               </p>
             </div>
           </div>

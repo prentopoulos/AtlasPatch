@@ -100,11 +100,10 @@ orchestrator = [
     # they are wired in phase 4 (distribution), behind guarded imports so the core
     # `atlaspatch` CLI never imports them.
     "pyyaml>=6.0",
-    # Phase 3 (add-conductor-gui): the read-only observability GUI. Imported only inside
-    # `atlas_conductor/gui/app.py` (never from the core CLI/telemetry path — enforced by
-    # a CI import-guard test), so `pip install atlas-patch` and the `atlaspatch` CLI are
-    # unaffected.
-    "streamlit>=1.30",
+    # Phase 3/9 (add-conductor-gui → redesign-observability-gui-react): the read-only
+    # observability GUI is now a static React SPA whose prebuilt bundle is vendored at
+    # `atlas_conductor/gui/web_dist` and shipped via package-data (below). It needs no Python
+    # runtime dependency — Streamlit was retired in phase 9 — so nothing is added here.
     # Phase 4 (add-conductor-distribution): the A2A agent transport and the BigQuery
     # telemetry backend. The transport runs the four agents as Google ADK agents exposed
     # over A2A (`google-adk` brings the a2a-sdk / httpx / starlette stack), served with
@@ -159,6 +158,9 @@ include = ["atlas_patch*", "atlas_conductor*"]
 [tool.setuptools.package-data]
 "atlas_patch" = ["configs/*.yaml"]
 "atlas_conductor.compliance" = ["*.yaml"]
+# Phase 9: the prebuilt React observability bundle is vendored in git and shipped in the wheel
+# so `pip install` stays Node-free (design D-REACT-5). Its source lives at repo-root `web/`.
+"atlas_conductor.gui" = ["web_dist/*", "web_dist/assets/*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "atlas_patch.__version__"}

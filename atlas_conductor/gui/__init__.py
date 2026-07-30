@@ -1,12 +1,14 @@
-"""The read-only observability GUI (phase 3 `add-conductor-gui`, design D18).
+"""The read-only observability surface (phase 3 `add-conductor-gui`, phase 9 React redesign).
 
-An additive renderer over the PHI-free telemetry sink: it tails the append-only JSONL
-families and renders run history, per-slide verdicts, the decision trace, cohort metrics,
-and the Level-1 agent-choreography view. It imports nothing from ``atlas_patch`` and never
-renders slide pixels or confidence scores.
+Two halves live here. The **producers** — ``reader``, ``model``, ``choreography``,
+``messageflow``, ``snapshot``, and ``export`` — read the append-only PHI-free telemetry and
+assemble it into the frozen, schema-versioned ``gui-snapshot`` payload (run history, per-slide
+structural verdicts, decision trace, cohort metrics, and derived Level-1/Level-2 choreography
+state). They import nothing from ``atlas_patch`` and hold no slide pixels or confidence scores.
 
-Only :mod:`atlas_conductor.gui.app` imports ``streamlit``; the reader, model, and
-choreography modules are dependency-free so the report export and the tests can reuse them
-without pulling in the GUI runtime (and so the core CLI import graph stays streamlit-free —
-enforced by a CI import-guard test).
+The **renderer** is the static React SPA whose prebuilt bundle is vendored at ``web_dist/`` and
+shipped in the wheel (its source lives at repo-root ``web/``). It consumes one exported
+``snapshot.json`` — no Python runtime, no telemetry directory, no server. The ``atlaspatch-conduct
+gui`` command serves the bundle over a stdlib HTTP server; the core CLI import graph stays free of
+any GUI runtime (enforced by a CI import-guard test).
 """

@@ -10,8 +10,8 @@ import { verdictMeta } from "@/lib/verdict";
 export function CohortMetrics({ run }: { run: RunView }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-      <StatTile label="Cohort" value={run.cohort_size} accent="text-foreground" />
-      {TERMINAL_OUTCOMES.map((outcome) => {
+      <StatTile label="Cohort" value={run.cohort_size} accent="text-foreground" index={0} />
+      {TERMINAL_OUTCOMES.map((outcome, i) => {
         const meta = verdictMeta(outcome);
         return (
           <StatTile
@@ -20,6 +20,7 @@ export function CohortMetrics({ run }: { run: RunView }) {
             value={run.counts[outcome] ?? 0}
             accent={meta.text}
             dot={meta.dot}
+            index={i + 1}
           />
         );
       })}
@@ -32,14 +33,16 @@ function StatTile({
   value,
   accent,
   dot,
+  index,
 }: {
   label: string;
   value: number;
   accent: string;
   dot?: string;
+  index: number;
 }) {
   return (
-    <Card className="p-4">
+    <Card className="ap-enter p-4" style={{ animationDelay: `${index * 45}ms` }}>
       <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
         {dot && <span className={cn("size-2 rounded-full", dot)} aria-hidden="true" />}
         {label}

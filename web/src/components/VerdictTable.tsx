@@ -85,8 +85,12 @@ export function VerdictTable({ slides }: { slides: SlideView[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sorted.map((slide) => (
-              <TableRow key={slide.slide_stem}>
+            {sorted.map((slide, i) => (
+              <TableRow
+                key={slide.slide_stem}
+                className="ap-enter"
+                style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}
+              >
                 <TableCell className="font-mono text-xs">{slide.slide_stem}</TableCell>
                 <TableCell>
                   <VerdictBadge outcome={slide.outcome} />

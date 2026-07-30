@@ -23,7 +23,8 @@ jobs:
     # click + PyYAML, so this job installs the conductor's runtime surface and the
     # package (without the heavy upstream ML deps, which the fake-adapter loop never
     # exercises). The deterministic core running with no GPU and no slides is the point.
-    # streamlit is added for the phase-3 GUI AppTest suite (headless, no browser/GPU).
+    # The observability GUI is a static React bundle (phase 9), tested in the separate `web`
+    # job; this job installs no GUI runtime — Streamlit was retired.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +35,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install "h5py>=3.8.0" "numpy>=1.21.0" "click>=8.0.0" \
-            "pyyaml>=6.0" "streamlit>=1.30" "pytest>=7.0.0" "ruff>=0.1.0"
+            "pyyaml>=6.0" "pytest>=7.0.0" "ruff>=0.1.0"
       - name: Install atlas_conductor (register the console entry point)
         run: python -m pip install -e . --no-deps
       - name: Lint
@@ -46,9 +47,10 @@ jobs:
 
   web:
     # Build and test the static React observability GUI (design D-REACT-6). Node-only; runs
-    # independent of the Python `app` job so neither toolchain taints the other. Slice A wires
-    # npm ci -> vitest -> vite build; Slice C adds the Playwright DOM guardrails and the
-    # build-and-diff staleness gate over the vendored web_dist/.
+    # independent of the Python `app` job so neither toolchain taints the other. Node is pinned
+    # to 22 (current LTS) to match the environment the vendored web_dist/ is built with, so the
+    # build-and-diff staleness gate below compares like-for-like and never trips on a
+    # cross-major toolchain difference.
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -57,7 +59,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: web/package-lock.json
       - name: Install web dependencies (locked)
@@ -66,5 +68,12 @@ jobs:
         run: npm run typecheck
       - name: Unit + render tests (Vitest)
         run: npx vitest run
+      - name: Install Playwright browser (Chromium)
+        run: npx playwright install --with-deps chromium
+      - name: DOM safety guardrails (Playwright)
+        run: npx playwright test
       - name: Build the static bundle
         run: npx vite build
+      - name: Assert vendored web_dist/ matches a fresh build (no drift)
+        working-directory: .
+        run: git diff --exit-code -- atlas_conductor/gui/web_dist

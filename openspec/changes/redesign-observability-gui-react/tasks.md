@@ -19,14 +19,14 @@
 
 ## 3. Slice C — motion, guardrails, vendored dist, Streamlit retirement (green in CI)
 
-- [ ] 3.1 Add tasteful on-load/enter motion to the stat-tiles, table rows, and choreography markers (CSS/Tailwind transitions or a lightweight primitive) — on-load only, no polling, nothing implying live data.
-- [ ] 3.2 Add a gated-run demo fixture (pseudonymized stems) alongside the default demo for the safety guardrails.
-- [ ] 3.3 Add the Playwright DOM guardrail suite over the demo and the gated fixture: no slide pixel/mask/heatmap image or canvas (decorative SVG chrome excluded by selector intent); no confidence/probability/diagnostic-score text anywhere in the DOM; only pseudonymized stems (no raw-identifier pattern); no control that submits, confirms, or writes.
-- [ ] 3.4 Wire Playwright into the CI `web` job (after Vitest, before/around `vite build`) and confirm it runs headless.
-- [ ] 3.5 Build and commit the vendored `atlas_conductor/gui/web_dist/`; declare it as `package-data` under `atlas_conductor.gui` in `pyproject.toml` so the wheel ships it and `pip install` stays Node-free.
-- [ ] 3.6 Add the CI build-and-diff step: rebuild from `web/` and assert the committed `web_dist/` is byte-identical (fail on drift).
-- [ ] 3.7 Retire Streamlit: delete `atlas_conductor/gui/app.py` and `tests/conductor/test_gui_app.py`, remove `streamlit>=1.30` from `pyproject.toml`, and remove the Streamlit install + AppTest step from the CI `app` job.
-- [ ] 3.8 Confirm the producer modules (`reader`/`model`/`choreography`/`messageflow`/`snapshot`/`export`/`trace`) and the `gui-snapshot` + `report-export` specs are untouched.
+- [x] 3.1 Add tasteful on-load/enter motion to the stat-tiles, table rows, and choreography markers (CSS/Tailwind transitions or a lightweight primitive) — on-load only, no polling, nothing implying live data.
+- [x] 3.2 Add a gated-run demo fixture (pseudonymized stems) alongside the default demo for the safety guardrails.
+- [x] 3.3 Add the Playwright DOM guardrail suite over the demo and the gated fixture: no slide pixel/mask/heatmap image or canvas (decorative SVG chrome excluded by selector intent); no confidence/probability/diagnostic-score text anywhere in the DOM; only pseudonymized stems (no raw-identifier pattern); no control that submits, confirms, or writes.
+- [x] 3.4 Wire Playwright into the CI `web` job (after Vitest, before/around `vite build`) and confirm it runs headless.
+- [x] 3.5 Build and commit the vendored `atlas_conductor/gui/web_dist/`; declare it as `package-data` under `atlas_conductor.gui` in `pyproject.toml` so the wheel ships it and `pip install` stays Node-free.
+- [x] 3.6 Add the CI build-and-diff step: rebuild from `web/` and assert the committed `web_dist/` is byte-identical (fail on drift).
+- [x] 3.7 Retire Streamlit: delete `atlas_conductor/gui/app.py` and `tests/conductor/test_gui_app.py`, remove `streamlit>=1.30` from `pyproject.toml`, and remove the Streamlit install + AppTest step from the CI `app` job.
+- [x] 3.8 Confirm the producer modules (`reader`/`model`/`choreography`/`messageflow`/`snapshot`/`export`/`trace`) and the `gui-snapshot` + `report-export` specs are untouched.
 
 ## 4. Verification & docs
 
