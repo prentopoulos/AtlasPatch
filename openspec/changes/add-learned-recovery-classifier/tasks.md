@@ -6,8 +6,8 @@
 
 ## 2. Operational, PHI-free features (D-LRC-2)
 
-- [ ] 2.1 Add `classifier/features.py` with a fixed, versioned operational stderr vocabulary and `features(outcome, verdict) -> np.ndarray` (Bernoulli stderr-token flags + `ReasonCode` one-hot + exit-code sign + attempt bucket). Export `FEATURE_VERSION` and the class ordering.
-- [ ] 2.2 Add a unit test asserting the feature vector and (later) serialized model contain no substring of an arbitrary identifier planted in stderr — the PHI-free-by-construction guarantee.
+- [x] 2.1 Add `classifier/features.py` with a fixed, versioned operational stderr vocabulary and `features(outcome, verdict) -> np.ndarray` (Bernoulli stderr-token flags + `ReasonCode` one-hot + exit-code sign + attempt bucket). Export `FEATURE_VERSION` and the class ordering.
+- [x] 2.2 Add a unit test asserting the feature vector and (later) serialized model contain no substring of an arbitrary identifier planted in stderr — the PHI-free-by-construction guarantee.
 
 ## 3. The learned model (D-LRC-3)
 

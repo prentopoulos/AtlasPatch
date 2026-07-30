@@ -19,7 +19,7 @@ recovery dataset (design D14).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 
 from atlas_conductor.agents import Agent
@@ -253,7 +253,15 @@ class Scheduler:
 
                 # validator → recovery: an invalid verdict is handed to recovery to classify.
                 self._route(Agent.VALIDATOR, Agent.RECOVERY, MessageType.CLASSIFY, node)
-                classified = self._classifier.classify(last_outcome, verdict)
+                # Stamp the attempt count onto a copy so the learned classifier's attempt-bucket
+                # feature is available at inference (design D-LRC-2); the worker's raw outcome is
+                # left untouched, and the rule classifier ignores the field.
+                to_classify = (
+                    replace(last_outcome, attempt=node.attempts)
+                    if last_outcome is not None
+                    else None
+                )
+                classified = self._classifier.classify(to_classify, verdict)
                 proposal = propose(
                     classified.classification, classified.signature, node, last_outcome
                 )
