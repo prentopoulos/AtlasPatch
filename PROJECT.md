@@ -23,12 +23,18 @@ first one below whose status is not Done.
 | 5 | `add-conductor-data-lineage` | Done | DVC/Git data-lineage pipeline over the orchestrator's inputs/outputs. Additive layer — no rework of earlier phases. |
 | 6 | `add-learned-recovery-classifier` | Done | Replace the rule-based failure classifier with one learned from the telemetry recovery dataset. The declarative task contract keeps this seam clean. |
 | 7 | `add-compliance-dossier` | Done | Full EU AI Act / ISO 42001 compliance dossier building on the phase-2 Model Card and audit trail. |
+| 8 | `add-gui-snapshot-contract` | Planned | Freeze the Python→renderer seam: extend `export.py` to emit a versioned `snapshot.json` (run history, per-slide verdicts, decision trace, cohort metrics, derived Level-1/Level-2 choreography state) as the single machine-readable observability payload, round-trip verified (sink → reader → snapshot). Streamlit GUI untouched; a richer export ships even on its own. Contract-first half of the GUI redesign. ADD `gui-snapshot`, MODIFY `report-export`. |
+| 9 | `redesign-observability-gui-react` | Planned | Replace the Streamlit observability GUI with a refined React SPA (Vite/TS + Tailwind + shadcn/ui + 21st.dev; design system from taste + ui-ux-pro-max skills) rendering the phase-8 frozen snapshot — semantic verdict system, KPI stat-tiles, sortable verdict table, decision-trace tree, and agent-choreography with tasteful on-load motion — all within the unchanged read-only / no-pixel / no-score / PHI-free invariants, re-homed from Streamlit `AppTest` to Vitest + Playwright DOM guardrails. Prebuilt `dist/` vendored so `pip install` stays Node-free. Client-polling live choreography deferred to a possible later phase. MODIFY `observability-gui`. |
 
-Phases 2–7 are additive follow-ons (design D17 for 2–4, the scope note for 5–7). Each is
+Phases 2–9 are additive follow-ons (design D17 for 2–4, the scope note for 5–7). Each is
 kept out of the phase-1 change to keep it reviewable, falls on a capability-spec boundary,
-and does not require retrofitting earlier work. Phase boundaries: A1/A2/A3 are *internal
-slices* of phase 1 (commit + CI checkpoints in one PR), not separate phases — splitting
-there would fragment specs mid-capability; phases 2–4 each add a whole capability.
+and does not require retrofitting earlier work. Phases 8–9 re-render the phase-3
+observability surface without touching its governance invariants: 8 freezes a snapshot
+contract (the Python↔React seam), 9 rebuilds the renderer on it and retires the Streamlit
+app. Phase boundaries: A1/A2/A3 are *internal slices* of phase 1 (commit + CI checkpoints in
+one PR), not separate phases — splitting there would fragment specs mid-capability; phases
+2–4 each add a whole capability; the 8/9 split falls on the frozen snapshot seam so the
+renderer is always built against a stable contract.
 
 ## Constraints
 
