@@ -576,6 +576,14 @@ atlaspatch-conduct gui <output_dir>/telemetry
 atlaspatch-conduct export-report <output_dir>/telemetry --format json
 ```
 
+The `--format json` output is the versioned observability **snapshot** — a single,
+schema-versioned, JSON-safe payload carrying everything the observability surface shows (run
+history, per-slide structural verdicts, decision trace, cohort metrics, and the derived Level-1
+choreography and Level-2 message-flow state). It is the one machine-readable contract every
+renderer consumes; its `schema_version` lets a renderer pin the shape. (This replaces the earlier
+partial JSON export, which omitted the derived state and carried no version.) The HTML sibling
+renders the same assembled data.
+
 `streamlit` ships in the `orchestrator` extra and is imported only by the GUI, so
 `pip install atlas-patch` and the core `atlaspatch` CLI stay GUI-free.
 

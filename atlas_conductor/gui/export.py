@@ -1,10 +1,15 @@
 """The HTML/JSON machine-readable sibling of the terminal report (report-export spec).
 
 Resolves the D18 open item: the same audit/telemetry data the terminal report prints, in
-another shape. It is assembled from the same :func:`build_run_views` structure the GUI
-renders, so the exported sibling and the GUI panels cannot diverge, and it reads only the
-PHI-free telemetry — pseudonymized stems, structural verdicts, reason codes, counts. It
-renders no slide pixel, mask, or confidence score (the HTML contains no ``<img>``).
+another shape. Both siblings are assembled from the same :func:`build_run_views` structure the
+GUI renders, so the exported sibling and the GUI panels cannot diverge, and they read only the
+PHI-free telemetry — pseudonymized stems, structural verdicts, reason codes, counts. Neither
+renders a slide pixel, mask, or confidence score (the HTML contains no ``<img>``).
+
+The JSON sibling **is** the versioned :mod:`~atlas_conductor.gui.snapshot` payload — the single
+machine-readable observability shape (design D-SNAP-3) — so it additionally carries each run's
+derived choreography and message-flow state and a schema version a renderer can pin. The HTML
+sibling keeps its own assembly from :func:`build_run_views`; a test asserts the two agree.
 """
 
 from __future__ import annotations
@@ -12,36 +17,16 @@ from __future__ import annotations
 import html
 import json
 from pathlib import Path
-from typing import Any
 
 from atlas_conductor.gui.model import RunView, build_run_views
 from atlas_conductor.gui.reader import TelemetryReader
+from atlas_conductor.gui.snapshot import assemble_snapshot
 from atlas_conductor.trace import render_slide_trace
 
 
-def run_view_to_dict(view: RunView) -> dict[str, Any]:
-    """Serialize one run to a JSON-safe dict (the machine-readable report body)."""
-    return {
-        "job_id": view.job_id,
-        "job": view.job,
-        "cohort_size": view.cohort_size,
-        "counts": view.counts,
-        "slides": [
-            {
-                "slide_stem": slide.slide_stem,
-                "outcome": slide.outcome,
-                "reason_code": slide.reason_code,
-                "detail": slide.detail,
-                "trace": slide.trace,
-            }
-            for slide in view.slides
-        ],
-    }
-
-
-def export_json(views: list[RunView]) -> str:
-    """Render the runs as a JSON document."""
-    return json.dumps({"runs": [run_view_to_dict(v) for v in views]}, indent=2, sort_keys=True)
+def export_json(source: TelemetryReader | str | Path) -> str:
+    """Render the telemetry as the versioned JSON snapshot document (D-SNAP-3)."""
+    return json.dumps(assemble_snapshot(source), indent=2, sort_keys=True)
 
 
 def _counts_line(view: RunView) -> str:
@@ -81,9 +66,9 @@ def export_html(views: list[RunView]) -> str:
 
 def export_report(telemetry_dir: str | Path, fmt: str = "json") -> str:
     """Read a telemetry directory and render the report sibling in ``fmt`` (json|html)."""
-    views = build_run_views(TelemetryReader(telemetry_dir))
+    reader = TelemetryReader(telemetry_dir)
     if fmt == "html":
-        return export_html(views)
+        return export_html(build_run_views(reader))
     if fmt == "json":
-        return export_json(views)
+        return export_json(reader)
     raise ValueError(f"unknown report format {fmt!r} (expected 'json' or 'html')")

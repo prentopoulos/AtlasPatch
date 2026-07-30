@@ -13,6 +13,7 @@ from pathlib import Path
 from atlas_conductor.config import JobConfig
 from atlas_conductor.contracts import Geometry, RequestedOutput, SlideOutcome
 from atlas_conductor.gui.export import export_report
+from atlas_conductor.gui.snapshot import SNAPSHOT_SCHEMA_VERSION
 from atlas_conductor.run import run_job
 from atlas_conductor.scheduler import RunResult
 from atlas_conductor.telemetry import JsonlTelemetrySink
@@ -68,6 +69,26 @@ def test_html_sibling_renders_no_image(tmp_path: Path) -> None:
     assert "verdict" in doc.lower()  # it is a verdict report, not a prediction
 
 
+def test_html_and_json_siblings_agree_on_a_run(tmp_path: Path) -> None:
+    # The two siblings are assembled from the same read path; they must report identical
+    # per-slide verdicts, reason codes, and cohort counts (report-export: siblings agree).
+    tele, _ = _run_cohort(tmp_path, ["a", "b", "c"])
+    run = json.loads(export_report(tele, fmt="json"))["runs"][0]
+    html_doc = export_report(tele, fmt="html")
+
+    for outcome, n in run["counts"].items():
+        assert f"{outcome}={n}" in html_doc  # the HTML counts line carries the same tallies
+    for slide in run["slides"]:
+        assert slide["slide_stem"] in html_doc
+        assert slide["outcome"] in html_doc
+        assert slide["reason_code"] in html_doc
+
+
 def test_empty_telemetry_exports_cleanly(tmp_path: Path) -> None:
-    assert json.loads(export_report(tmp_path / "empty", fmt="json")) == {"runs": []}
+    # The JSON sibling is now the versioned snapshot: an empty telemetry dir yields the
+    # schema version, the agent roster, and an empty runs list (report-export: JSON is the
+    # versioned snapshot).
+    doc = json.loads(export_report(tmp_path / "empty", fmt="json"))
+    assert doc["schema_version"] == SNAPSHOT_SCHEMA_VERSION
+    assert doc["runs"] == []
     assert "No runs recorded" in export_report(tmp_path / "empty", fmt="html")
