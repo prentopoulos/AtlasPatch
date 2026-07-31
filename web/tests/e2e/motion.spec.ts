@@ -32,7 +32,7 @@ test("reduced-motion suppresses animation and renders the resting state", async 
   await expect(page.getByText("Run history")).toBeVisible();
 
   // An entrance-animated node resolves to no animation and full opacity (its resting state).
-  const pill = page.locator('[data-testid="agent-nodes"] > div').first();
+  const pill = page.locator('[data-testid="agent-nodes"] > li').first();
   await expect(pill).toBeVisible();
   expect(await pill.evaluate((el) => getComputedStyle(el).animationName)).toBe("none");
   expect(await pill.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
