@@ -48,18 +48,18 @@ export function SnapshotLoader({ onLoad }: SnapshotLoaderProps) {
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
       className={cn(
-        "flex items-center gap-3 rounded-lg border border-dashed border-border bg-card/40 px-4 py-3 text-xs text-muted-foreground transition-colors",
+        "inline-flex items-center gap-2.5 rounded-lg border border-dashed border-border bg-card/40 px-3 py-2 text-xs text-muted-foreground transition-colors",
         dragging && "border-ring bg-muted/60 text-foreground",
       )}
     >
       <Upload className="size-4 shrink-0" aria-hidden="true" />
-      <span className="hidden sm:inline">
-        Drop a <code className="font-mono">snapshot.json</code> here, or
+      <span className="hidden whitespace-nowrap sm:inline">
+        Drop a <code className="font-mono">snapshot.json</code>, or
       </span>
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="rounded-md border border-border bg-muted px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-border"
+        className="shrink-0 whitespace-nowrap rounded-md border border-border bg-muted px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-border"
       >
         Choose file
       </button>
