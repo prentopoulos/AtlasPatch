@@ -25,9 +25,11 @@
   - [3. Install SAM2](#3-install-sam2)
   - [Optional extras](#optional-extras)
   - [Alternative Installation Methods](#alternative-installation-methods)
+  - [Install from Source (Development)](#install-from-source-development)
 - [Usage Guide](#usage-guide)
   - [Choose a Command](#choose-a-command)
   - [Quick Start](#quick-start)
+    - [Tissue detection only](#tissue-detection-only)
     - [Full patch pipeline](#full-patch-pipeline)
     - [Slide encoding](#slide-encoding)
     - [Patient encoding](#patient-encoding)
@@ -156,6 +158,26 @@ uv pip install git+https://github.com/facebookresearch/sam2.git
 
 </details>
 
+### Install from Source (Development)
+
+Editable install from a local clone, for development or the latest unreleased code.
+
+```bash
+git clone https://github.com/AtlasAnalyticsLab/AtlasPatch.git
+cd AtlasPatch
+
+# Create and activate environment
+conda create -n atlas_patch python=3.10
+conda activate atlas_patch
+
+# Install OpenSlide
+conda install -c conda-forge openslide
+
+# Editable install of AtlasPatch and SAM2
+pip install -e ".[dev]"
+pip install git+https://github.com/facebookresearch/sam2.git
+```
+
 ## Usage Guide
 
 AtlasPatch provides a flexible pipeline with **4 checkpoints** that you can use independently or combine based on your needs.
@@ -175,6 +197,25 @@ AtlasPatch provides a flexible pipeline with **4 checkpoints** that you can use 
 | `encode-patient` | You have a CSV file that lists which slides belong to each patient | `patient_features/<encoder>/<case_id>.h5` | [docs/commands/encode-patient.md](docs/commands/encode-patient.md) |
 
 ### Quick Start
+
+#### Tissue detection only
+
+```bash
+# One slide
+atlaspatch detect-tissue /path/to/slide.svs \
+  --output ./output \
+  --device cuda
+
+# Directory of slides (add --recursive for nested subfolders)
+atlaspatch detect-tissue /path/to/slides \
+  --output ./output \
+  --device cuda \
+  --recursive
+```
+
+`detect-tissue` writes masks and overlays to `./output/visualization/` only, no patch coordinates, features, or embeddings.
+
+See [docs/commands/detect-tissue.md](docs/commands/detect-tissue.md) for the full argument list.
 
 #### Full patch pipeline
 
@@ -650,10 +691,20 @@ agent records:
 
 ```yaml
 # job.yaml
+input_dir: /path/to/slides    # a folder of WSIs
+output_dir: /path/to/output
+requested_output: coords
+patch_size: 256
+target_mag: 20
 telemetry:
   backend: bigquery      # default: jsonl
   dataset: my_dataset    # required for bigquery; one table per record family
 ```
+
+Setup: `pip install "atlas-patch[orchestrator]"`, `gcloud auth application-default login`,
+and create `my_dataset` plus its 5 tables (`jobs`, `slide_stage_outcomes`,
+`validation_results`, `agent_events`, `message_flow`) in BigQuery beforehand — the sink
+writes rows, it doesn't create them. Then run `atlaspatch-conduct run job.yaml --adapter real`.
 
 `google-cloud-bigquery` is imported only inside `atlas_conductor/telemetry_bigquery.py`
 (behind the `orchestrator` extra), so the base install stays cloud-free. The GUI and the
