@@ -126,8 +126,13 @@ export function Choreography({ run, agents }: { run: RunView; agents: string[] }
               </svg>
             )}
 
-            {/* Level-1 node pills — accessible, positioned by normal flow, wrapping as needed. */}
-            <div className="relative z-10 flex flex-wrap gap-2" data-testid="agent-nodes">
+            {/* Level-1 node pills — accessible, laid out on a roomy 2-column grid so the SVG
+                edges and their count chips have space to route between nodes rather than over
+                them (the narrow panel column can't fit a single horizontal pipeline). */}
+            <div
+              className="relative z-10 grid grid-cols-2 justify-items-start gap-x-12 gap-y-7 py-1"
+              data-testid="agent-nodes"
+            >
               {agents.map((agent, i) => {
                 const lit = choreography.lit[agent] ?? false;
                 return (
@@ -140,7 +145,7 @@ export function Choreography({ run, agents }: { run: RunView; agents: string[] }
                     }}
                     style={{ animationDelay: `${i * 45}ms` }}
                     className={cn(
-                      "ap-enter flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium capitalize",
+                      "ap-enter flex w-fit items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium capitalize",
                       lit
                         ? "ap-halo border-ring/50 bg-accent/10 text-foreground"
                         : "border-border bg-muted/30 text-muted-foreground",
