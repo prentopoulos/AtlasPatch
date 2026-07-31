@@ -1,8 +1,8 @@
 ## 1. Design tokens & motion foundation
 
-- [ ] 1.1 Extend `web/src/index.css` OKLCH tokens (accent aurora stop, glow ring, translucent card tint) and map them through `@theme inline` — do not fork the verdict palette
-- [ ] 1.2 Add the one-shot motion utilities/keyframes: a spring-eased staggered entrance (richer than `ap-rise`), an edge draw-in keyframe (`stroke-dashoffset`), and a glow/halo util — all whole Tailwind class literals
-- [ ] 1.3 Ensure every new animation sits behind `@media (prefers-reduced-motion: reduce)` and resolves to the final resting state
+- [x] 1.1 Extend `web/src/index.css` OKLCH tokens (accent aurora stop, glow ring, translucent card tint) and map them through `@theme inline` — do not fork the verdict palette
+- [x] 1.2 Add the one-shot motion utilities/keyframes: a spring-eased staggered entrance (richer than `ap-rise`), an edge draw-in keyframe (`stroke-dashoffset`), and a glow/halo util — all whole Tailwind class literals
+- [x] 1.3 Ensure every new animation sits behind `@media (prefers-reduced-motion: reduce)` and resolves to the final resting state
 
 ## 2. Choreography flow graph (hero)
 
