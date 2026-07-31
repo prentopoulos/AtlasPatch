@@ -6,10 +6,10 @@
 
 ## 2. Choreography flow graph (hero)
 
-- [ ] 2.1 Replace the message-flow list with an inline `<svg>` directed graph: positioned agent node pills (lit/idle) + directed edges with counts, latest edge emphasized
-- [ ] 2.2 Animate edges to draw in once via `stroke-dashoffset` (one-shot on mount, no loop); add a soft CSS halo to lit nodes
-- [ ] 2.3 Preserve clean degradation to component-state-only when `message_flow.has_flow` is false; keep the "now processing" ticker
-- [ ] 2.4 Mark all decorative SVG `aria-hidden`; keep node/edge labels accessible
+- [x] 2.1 Replace the message-flow list with an inline `<svg>` directed graph: positioned agent node pills (lit/idle) + directed edges with counts, latest edge emphasized
+- [x] 2.2 Animate edges to draw in once via `stroke-dashoffset` (one-shot on mount, no loop); add a soft CSS halo to lit nodes
+- [x] 2.3 Preserve clean degradation to component-state-only when `message_flow.has_flow` is false; keep the "now processing" ticker
+- [x] 2.4 Mark all decorative SVG `aria-hidden`; keep node/edge labels accessible
 
 ## 3. Header presence
 
