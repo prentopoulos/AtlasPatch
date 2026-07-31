@@ -25,7 +25,7 @@
 
 ## 5. Guardrails, tests & bundle
 
-- [ ] 5.1 Add/extend a test asserting no infinite animation and full reduced-motion suppression (covers the new spec requirement)
-- [ ] 5.2 Run `npm run test` and `npm run test:e2e` (incl. `guardrails.spec.ts`) — confirm no `<img>`/`<canvas>`, no score/raw-id vocabulary, no write controls, all green
-- [ ] 5.3 Run `npm run build` / typecheck; re-vendor the static bundle deterministically (LF) and diff it for byte-reproducibility
+- [x] 5.1 Add/extend a test asserting no infinite animation and full reduced-motion suppression (covers the new spec requirement)
+- [x] 5.2 Run `npm run test` and `npm run test:e2e` (incl. `guardrails.spec.ts`) — confirm no `<img>`/`<canvas>`, no score/raw-id vocabulary, no write controls, all green
+- [x] 5.3 Run `npm run build` / typecheck; re-vendor the static bundle deterministically (LF) and diff it for byte-reproducibility
 - [ ] 5.4 Visual check in the browser (light + dark, reduced-motion on/off) before wrapping the change
