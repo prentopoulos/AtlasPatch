@@ -29,6 +29,13 @@
   --verdict-quarantined-soft: oklch(0.95 0.06 75);
   --verdict-blocked: oklch(0.58 0.19 25);
   --verdict-blocked-soft: oklch(0.95 0.05 25);
+
+  /* Elevation tokens (phase 10): a counter-stop for the header aurora wash, the spotlight/halo
+     glow color (carries its own alpha), and a translucent surface tint for elevated panels.
+     These extend the neutral surface — the four-verdict spine above is never forked. */
+  --accent-aurora: oklch(0.62 0.16 300);
+  --glow: oklch(0.7 0.1 235 / 0.45);
+  --surface-tint: oklch(1 0 0 / 0.55);
 }
 
 .dark {
@@ -50,6 +57,10 @@
   --verdict-quarantined-soft: oklch(0.34 0.07 70);
   --verdict-blocked: oklch(0.72 0.17 22);
   --verdict-blocked-soft: oklch(0.33 0.09 22);
+
+  --accent-aurora: oklch(0.7 0.15 300);
+  --glow: oklch(0.82 0.12 210 / 0.32);
+  --surface-tint: oklch(0.24 0.02 260 / 0.55);
 }
 
 @theme inline {
@@ -72,6 +83,10 @@
   --color-verdict-blocked: var(--verdict-blocked);
   --color-verdict-blocked-soft: var(--verdict-blocked-soft);
 
+  --color-accent-aurora: var(--accent-aurora);
+  --color-glow: var(--glow);
+  --color-surface-tint: var(--surface-tint);
+
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", Menlo, monospace;
 }
@@ -89,29 +104,117 @@
 }
 
 /* ---------------------------------------------------------------------------
-   On-load motion only (design D-REACT-9): a one-shot fade + rise that aids
-   first-read hierarchy. It runs once on mount — never a polling loop and never
-   anything implying live data — and is disabled under prefers-reduced-motion.
-   Stagger is applied per element via an inline animation-delay.
+   Motion toolkit (design D-REACT-9, promoted to spec in phase 10). Every effect
+   here is ONE-SHOT on mount or driven by a direct interaction (hover / focus) —
+   nothing loops, nothing implies live/streaming data (the surface is a frozen
+   snapshot tailer). All of it collapses to the final resting state under
+   `prefers-reduced-motion: reduce`. Stagger is an inline `animation-delay`.
    --------------------------------------------------------------------------- */
+
+/* Staggered entrance (upgrades the former plain fade+rise): a fade + rise + subtle
+   scale on a smooth exponential ease-out, so panels decelerate into place with
+   presence but without an overshoot/bounce. */
 @keyframes ap-rise {
-  from {
+  0% {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px) scale(0.985);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* One-shot edge draw-in for the choreography flow graph. Paths carry
+   `pathLength="1"`, so a dash of length 1 with a 1→0 offset sweep draws the
+   whole edge exactly once. Resting state (no animation) is fully drawn. */
+@keyframes ap-draw {
+  from {
+    stroke-dashoffset: 1;
   }
   to {
-    opacity: 1;
-    transform: none;
+    stroke-dashoffset: 0;
   }
 }
 
 @layer utilities {
   .ap-enter {
-    animation: ap-rise 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: ap-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
+
+  .ap-edge {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+    animation: ap-draw 0.7s ease both;
+  }
+
+  /* Soft halo for a lit agent node: a hairline accent ring plus an outer glow. */
+  .ap-halo {
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, var(--accent) 45%, transparent),
+      0 0 18px -4px var(--glow);
+  }
+
+  /* Hairline inner top-highlight for elevated tiles (static; adds depth). */
+  .ap-inner {
+    box-shadow: inset 0 1px 0 0 color-mix(in oklch, white 7%, transparent);
+  }
+
+  /* Interaction-driven hover lift. */
+  .ap-lift {
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  @media (hover: hover) {
+    .ap-lift:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  /* Cursor-tracking spotlight border/glow (design decision 5). The `--mx/--my`
+     custom properties are updated on `pointermove` (custom-property writes only,
+     no layout). Purely decorative, hover-gated, one-shot per interaction. */
+  .ap-spotlight::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    background: radial-gradient(
+      200px circle at var(--mx, 50%) var(--my, 0%),
+      var(--glow),
+      transparent 62%
+    );
+  }
+  @media (hover: hover) {
+    .ap-spotlight:hover::before {
+      opacity: 1;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .ap-enter {
       animation: none;
+    }
+    .ap-edge {
+      animation: none;
+      stroke-dashoffset: 0;
+    }
+    .ap-lift {
+      transition: none;
+    }
+    .ap-lift:hover {
+      transform: none;
+    }
+    .ap-spotlight::before {
+      transition: none;
     }
   }
 }

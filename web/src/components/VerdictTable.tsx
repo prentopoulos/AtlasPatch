@@ -12,7 +12,7 @@ import {
 import { VerdictBadge } from "@/components/VerdictBadge";
 import { cn } from "@/lib/utils";
 import type { SlideView } from "@/lib/snapshot";
-import { verdictRank } from "@/lib/verdict";
+import { verdictMeta, verdictRank } from "@/lib/verdict";
 
 type SortKey = "slide_stem" | "outcome" | "reason_code";
 type SortDir = "asc" | "desc";
@@ -85,22 +85,35 @@ export function VerdictTable({ slides }: { slides: SlideView[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sorted.map((slide, i) => (
-              <TableRow
-                key={slide.slide_stem}
-                className="ap-enter"
-                style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}
-              >
-                <TableCell className="font-mono text-xs">{slide.slide_stem}</TableCell>
-                <TableCell>
-                  <VerdictBadge outcome={slide.outcome} />
-                </TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground">
-                  {slide.reason_code}
-                </TableCell>
-                <TableCell className="text-muted-foreground">{slide.detail}</TableCell>
-              </TableRow>
-            ))}
+            {sorted.map((slide, i) => {
+              const meta = verdictMeta(slide.outcome);
+              return (
+                <TableRow
+                  key={slide.slide_stem}
+                  className="ap-enter"
+                  style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}
+                >
+                  <TableCell className="relative pl-4 font-mono text-xs">
+                    {/* Leading verdict color-rail: bg-current picks up the verdict text color. */}
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "pointer-events-none absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-current opacity-80",
+                        meta.text,
+                      )}
+                    />
+                    {slide.slide_stem}
+                  </TableCell>
+                  <TableCell>
+                    <VerdictBadge outcome={slide.outcome} />
+                  </TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {slide.reason_code}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{slide.detail}</TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </CardContent>
