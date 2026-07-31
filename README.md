@@ -298,7 +298,10 @@ Quantitative and qualitative analysis of AtlasPatch tissue detection against exi
   <img src="https://raw.githubusercontent.com/AtlasAnalyticsLab/AtlasPatch/main/assets/images/Comparisons.jpg" alt="AtlasPatch method comparison" width="100%">
 </p>
 
-Representative WSI thumbnails are shown from diverse tissue features and artifact conditions, with tissue masks predicted by thresholding methods (TIAToolbox, CLAM) and deep learning methods (pretrained "non-finetuned" SAM2 model, Trident-QC, Trident-Hest and AtlasPatch), highlighting differences in boundary fidelity, artifact suppression and handling of fragmented tissue. Tissue detection performance is also shown on the held-out test set for AtlasPatch and baseline pipelines, highlighting that AtlasPatch matches or exceeds their segmentation quality. The segmentation complexity–performance trade-off, plotting F1-score against segmentation runtime (on a random set of 100 WSIs), shows AtlasPatch achieves high performance with substantially lower wall-clock time than tile-wise detectors and heuristic pipelines, underscoring its suitability for large-scale WSI preprocessing.
+Masks are compared against thresholding baselines (TIAToolbox, CLAM) and deep-learning
+baselines (pretrained SAM2, Trident-QC, Trident-Hest). On a held-out test set and a 100-WSI
+runtime benchmark, AtlasPatch matches or exceeds their segmentation quality at substantially
+lower wall-clock time.
 
 ## Encoders
 
@@ -574,79 +577,56 @@ with h5py.File("output/patient_features/moozy/case-001.h5", "r") as f:
 
 ## Orchestration at cohort scale
 
-The optional `atlas_conductor` layer runs the pipeline reliably across a whole cohort —
-planning which slides to (re)process, dispatching work, validating the HDF5 outputs,
-recovering from failures with bounded retries, and recording metadata-only telemetry —
-without modifying the ML pipeline. Install it with the `orchestrator` extra and drive it
-from a YAML job config:
+`atlas_conductor` is an optional layer for running AtlasPatch reliably across a whole
+cohort: it plans work, dispatches it, validates outputs, retries failures, and logs
+metadata-only telemetry. It never modifies the ML pipeline.
 
 ```bash
 pip install "atlas-patch[orchestrator]"
-atlaspatch-conduct run job.yaml --dry-run   # preview the plan; drop --dry-run to execute
+atlaspatch-conduct run job.yaml --dry-run   # preview the plan; drop --dry-run to run it
 ```
 
-The layer ships **by-construction governance guardrails** (`atlas_conductor.governance`),
-all additive over the metadata-only telemetry and none touching the ML pipeline: slide
-stems are pseudonymized and HIPAA Safe-Harbor identifiers rejected before anything is
-persisted, irreversible or expensive recovery actions (`force_reprocess`, `quarantine`,
-`block_job`) are held for human confirmation unless the run is explicitly unattended, and
-every consequential action is written to a tamper-evident, hash-chained audit trail. The
-maintained **[System/Model Card](MODEL_CARD.md)** documents the non-SaMD scope boundary and
-these safeguards as verifiable technical conditions (not a legal compliance certification).
+Built-in guardrails:
 
-See the **[orchestration usage guide](docs/orchestration.md)** for the job-config schema,
-running with the fake (no-GPU) or real adapter, reading the report and decision trace, and
-the recovery and telemetry model.
+- Slide identifiers are pseudonymized; HIPAA Safe-Harbor identifiers are rejected before anything is saved.
+- Risky recovery actions (`force_reprocess`, `quarantine`, `block_job`) need human confirmation unless the run is explicitly unattended.
+- Every action is written to a tamper-evident, hash-chained audit trail.
+
+These are documented as verifiable technical safeguards — not a legal certification — in
+the [System/Model Card](MODEL_CARD.md). Full schema and recovery/telemetry model: the
+[orchestration guide](docs/orchestration.md).
 
 ### Observability GUI
 
-A read-only **static React** GUI renders the metadata-only telemetry: run history, per-slide
-**verdicts** (the validator's structural pass/fail with a reason code — never a prediction or
-confidence score), the per-slide **decision trace**, cohort metrics, and the **agent-choreography**
-view (Level-1 component-state — planner / worker / validator / recovery / scheduler shown active or
-idle with a "now processing slide X · stage Y" ticker — plus Level-2 message-flow edges). It
-**imports nothing from the ML pipeline**, renders **no slide pixels**, and shows slide identifiers
-exactly as persisted (pseudonymized for gated runs). It is strictly an observer — it submits no jobs
-and confirms no actions.
+A read-only static GUI renders a run's telemetry: run history, per-slide verdicts (pass/fail
++ reason code, never a prediction), decision traces, cohort metrics, and an
+agent-choreography view. It renders no slide pixels and submits no jobs — a pure observer.
 
-The GUI is a **static, point-in-time renderer**: a prebuilt bundle is vendored in the wheel, so
-`pip install atlas-patch` needs **no Node and no build step**. It reads one exported
-`snapshot.json` — no Python runtime, no telemetry directory, no server. Out of the box it renders a
-**bundled demo**; load a real run with the in-page **file picker or drag-and-drop**.
+It ships as a prebuilt static bundle (no Node, no server, no Python runtime), so
+`pip install atlas-patch` stays lean. Out of the box it shows a bundled demo; load a real
+run via the file picker or drag-and-drop.
 
 ```bash
-# Serve the packaged GUI locally and open it in a browser (stdlib HTTP server, no Node):
+# Serve the GUI locally:
 atlaspatch-conduct gui
 
-# Export a run's snapshot, then load it in the GUI via the file picker / drag-and-drop:
+# Export a run's snapshot, then load it in the GUI:
 atlaspatch-conduct export-report <output_dir>/telemetry --format json > snapshot.json
 ```
 
-The `--format json` output is the versioned observability **snapshot** — a single,
-schema-versioned, JSON-safe payload carrying everything the observability surface shows (run
-history, per-slide structural verdicts, decision trace, cohort metrics, and the derived Level-1
-choreography and Level-2 message-flow state). It is the one machine-readable contract the renderer
-consumes; the SPA pins its `schema_version` and shows an explicit incompatibility state on mismatch.
-The HTML sibling renders the same assembled data.
-
-The GUI needs **no runtime Python dependency** (Streamlit was retired in favour of the static
-bundle), so `pip install atlas-patch` and the core `atlaspatch` CLI stay GUI-free. The SPA source
-lives at repo-root [`web/`](web/); CI rebuilds it and asserts the vendored bundle is byte-identical.
+`snapshot.json` is a versioned, schema-checked payload — the GUI shows an explicit error on
+a version mismatch instead of rendering stale data. SPA source lives in [`web/`](web/); CI
+verifies the vendored bundle matches it.
 
 ### Compliance dossier and per-run evidence
 
-The maintained **[compliance dossier](COMPLIANCE.md)** positions the layer against the **EU
-AI Act** (Annex IV technical documentation) and **ISO/IEC 42001**, mapping each applicable
-obligation to an implemented control and the CI test that enforces it, under a documented
-non-SaMD risk-tier determination. The mapping lives in a machine-checkable control register
-(`atlas_conductor/compliance/controls.yaml`) that CI keeps in sync with the code — every cited
-module/test must resolve and every row must appear in the dossier. It documents **verifiable
-technical safeguards**, not a legal certification.
+The [compliance dossier](COMPLIANCE.md) maps the orchestration layer's controls to **EU AI
+Act** and **ISO/IEC 42001** requirements, each backed by a CI test and tracked in a
+machine-checked control register (`atlas_conductor/compliance/controls.yaml`). It documents
+verifiable technical safeguards, not a legal certification.
 
-For a specific completed run, `export-dossier` emits a PHI-free **evidence bundle** — the audit
-chain re-verified (reported broken if the trail was tampered with), the run's HITL
-holds/approvals/waivers and telemetry-gate rejections, the per-slide outcomes and cohort counts,
-and the control-register summary — from the same read path as `export-report`:
+For a specific run, export a PHI-free evidence bundle (re-verified audit trail, HITL
+decisions, per-slide outcomes, control summary):
 
 ```bash
 atlaspatch-conduct export-dossier <output_dir>/telemetry --format json   # or html
@@ -654,40 +634,28 @@ atlaspatch-conduct export-dossier <output_dir>/telemetry --format json   # or ht
 
 ### Distributed agent choreography (A2A)
 
-By default the four logical agents (planner, worker, validator, recovery) run as plain
-in-process calls, and the scheduler is the in-process governor. The run can optionally wire
-those four as **Google ADK agents exposed as A2A peers** (Agent2Agent protocol) so their
-handoffs travel over the wire — purely for **watchable choreography**: the transport records
-the same metadata-only `message_flow` telemetry either way and never changes what a run
-computes, so the core is identical with or without it. Each peer is a *deterministic* custom
-ADK agent (not an LLM agent), so the no-clinical-reasoning invariant holds even over A2A.
-Select it per job config:
+By default the four agents (planner, worker, validator, recovery) run as in-process calls.
+You can optionally run them as separate processes over Google's A2A protocol instead, purely
+to make the choreography watchable — same telemetry either way, and it never changes what a
+run computes. Each peer is a deterministic agent, not an LLM.
 
 ```yaml
 # job.yaml
 transport: a2a        # default: in-process
 ```
 
-Then start the loopback peer set in one terminal and run the job in another:
-
 ```bash
-python -m atlas_conductor.transport.a2a   # terminal 1: serve the four A2A peers on 127.0.0.1
+python -m atlas_conductor.transport.a2a   # terminal 1: serve the four peers
 atlaspatch-conduct run job.yaml           # terminal 2: run with transport: a2a
 ```
 
-The `message_flow` family drives the GUI **Level-2 message-flow** view (directed edges
-between agent nodes, pulsing on recency); a run recorded without message flow degrades to the
-Level-1 component-state view. The ADK/A2A stack (`google-adk` and its dependencies) lives in
-the `orchestrator` extra and is imported only inside `atlas_conductor/transport/a2a.py`, so
-the base `atlaspatch` CLI import graph stays cloud-free; selecting `a2a` without the extra
-fails with a clear "install `atlas-patch[orchestrator]`" error.
+Needs the `orchestrator` extra (`google-adk`); selecting `a2a` without it fails with a clear
+install error.
 
 ### Telemetry backend (local JSONL or BigQuery)
 
-Telemetry defaults to the credential-free local JSONL backend. A run can instead append the
-**same** metadata-only records to **BigQuery** — a cohort-scale, queryable backend — by
-naming a dataset in the job config; switching the backend changes nothing about what any
-agent records:
+Telemetry defaults to local JSONL files, no credentials needed. Point it at BigQuery instead
+for cohort-scale querying — same records, different sink:
 
 ```yaml
 # job.yaml
@@ -697,44 +665,39 @@ requested_output: coords
 patch_size: 256
 target_mag: 20
 telemetry:
-  backend: bigquery      # default: jsonl
-  dataset: my_dataset    # required for bigquery; one table per record family
+  backend: bigquery
+  dataset: my_dataset
 ```
 
 Setup: `pip install "atlas-patch[orchestrator]"`, `gcloud auth application-default login`,
-and create `my_dataset` plus its 5 tables (`jobs`, `slide_stage_outcomes`,
-`validation_results`, `agent_events`, `message_flow`) in BigQuery beforehand — the sink
-writes rows, it doesn't create them. Then run `atlaspatch-conduct run job.yaml --adapter real`.
+then create `my_dataset` and its 5 tables (`jobs`, `slide_stage_outcomes`,
+`validation_results`, `agent_events`, `message_flow`) — the sink writes rows, it doesn't
+create them. Then `atlaspatch-conduct run job.yaml --adapter real`.
 
-`google-cloud-bigquery` is imported only inside `atlas_conductor/telemetry_bigquery.py`
-(behind the `orchestrator` extra), so the base install stays cloud-free. The GUI and the
-report read the local JSONL backend; BigQuery is a write target for cohort-scale analysis.
+The GUI and report always read local JSONL; BigQuery is a write-only target for analysis.
 
 ### Data lineage (content-addressed provenance)
 
-Where telemetry records *what a run decided*, **lineage** content-addresses *which exact input
-bytes plus which config produced which output HDF5*: one record per output tying the SHA-256 of
-each input WSI + a config fingerprint to the SHA-256 of the produced HDF5, keyed on the
-pseudonymized stem. Record it post-hoc, or automatically at run end via a config block:
+Lineage records exactly which input bytes and config produced which output file: a SHA-256
+of each input WSI and of the produced HDF5, keyed to the pseudonymized slide stem.
 
 ```bash
-atlaspatch-conduct lineage <output_dir>              # default: stdlib manifest backend
+atlaspatch-conduct lineage <output_dir>              # default backend
 atlaspatch-conduct lineage <output_dir> --backend dvc
 ```
+
+Or record it automatically at run end:
 
 ```yaml
 # job.yaml
 lineage:
-  backend: manifest      # 'manifest' (default, stdlib-only) or 'dvc' (opt-in)
+  backend: manifest      # default (stdlib-only), or 'dvc'
 ```
 
-The default `manifest` backend writes `<output_dir>/lineage/manifest.jsonl` with only the
-standard library. The opt-in `dvc` backend writes a `dvc.yaml` stage + `.dvc` pointers so Git
-history becomes the lineage record. Lineage persists **hashes, not pixels** — it never copies,
-tracks, or `dvc push`-es a WSI/mask/embedding, and every tracked identifier is the `slide_<hex>`
-pseudonym, so no raw filename or HIPAA identifier lands in the manifest or any tracked path.
-`dvc` lives in the `orchestrator` extra and is touched only inside the DVC backend, so the base
-CLI import graph stays DVC-free. See the [orchestration guide](docs/orchestration.md#data-lineage).
+`manifest` writes `<output_dir>/lineage/manifest.jsonl`. `dvc` additionally writes a
+`dvc.yaml` stage + `.dvc` pointers, so Git history becomes the lineage record. Either way,
+only hashes are stored — never pixels, and never a raw filename or HIPAA identifier. See the
+[orchestration guide](docs/orchestration.md#data-lineage).
 
 ## SLURM job scripts
 
