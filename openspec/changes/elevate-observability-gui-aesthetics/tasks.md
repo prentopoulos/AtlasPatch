@@ -18,10 +18,10 @@
 
 ## 4. Shared panel polish
 
-- [ ] 4.1 CohortMetrics tiles: cursor-tracking spotlight/glow border, hover-lift, number sheen, hairline inner-glow — no count-up
-- [ ] 4.2 VerdictTable + RunHistory: leading verdict color-rail per row, hover row-glow, smooth selection state
-- [ ] 4.3 Apply the new spring-eased staggered entrance consistently across panels (replace/upgrade `ap-enter` usage)
-- [ ] 4.4 Implement the pointer-driven glow via CSS custom properties on `pointermove` (no layout writes), gated to hover-capable devices and inert under reduced-motion
+- [x] 4.1 CohortMetrics tiles: cursor-tracking spotlight/glow border, hover-lift, number sheen, hairline inner-glow — no count-up
+- [x] 4.2 VerdictTable + RunHistory: leading verdict color-rail per row, hover row-glow, smooth selection state
+- [x] 4.3 Apply the new spring-eased staggered entrance consistently across panels (replace/upgrade `ap-enter` usage)
+- [x] 4.4 Implement the pointer-driven glow via CSS custom properties on `pointermove` (no layout writes), gated to hover-capable devices and inert under reduced-motion
 
 ## 5. Guardrails, tests & bundle
 
