@@ -111,8 +111,9 @@
    `prefers-reduced-motion: reduce`. Stagger is an inline `animation-delay`.
    --------------------------------------------------------------------------- */
 
-/* Spring-eased staggered entrance (upgrades the former plain fade+rise): a gentle
-   overshoot on the easing curve gives panels a settled, physical arrival. */
+/* Staggered entrance (upgrades the former plain fade+rise): a fade + rise + subtle
+   scale on a smooth exponential ease-out, so panels decelerate into place with
+   presence but without an overshoot/bounce. */
 @keyframes ap-rise {
   0% {
     opacity: 0;
@@ -141,7 +142,7 @@
 
 @layer utilities {
   .ap-enter {
-    animation: ap-rise 0.5s cubic-bezier(0.34, 1.4, 0.5, 1) both;
+    animation: ap-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .ap-edge {
