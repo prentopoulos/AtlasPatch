@@ -64,22 +64,37 @@ export default function App() {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-6xl px-6 py-8">
-        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 rounded-lg bg-muted p-2 text-accent">
-              <Activity className="size-5" aria-hidden="true" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight">
-                AtlasPatch Conductor — Observability
-              </h1>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                Read-only view over the PHI-free snapshot — structural verdicts with reason
-                codes, the decision trace, and no slide pixels.
-              </p>
-            </div>
+        <header className="ap-inner relative mb-6 overflow-hidden rounded-2xl border border-border/60 bg-card/40 px-5 py-5">
+          {/* Decorative aurora wash: two blurred color fields hinting depth behind the lockup. */}
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 opacity-70">
+            <div className="absolute -left-20 -top-24 size-64 rounded-full bg-accent/25 blur-3xl" />
+            <div className="absolute -top-28 right-0 size-64 rounded-full bg-accent-aurora/25 blur-3xl" />
           </div>
-          <SnapshotLoader onLoad={handleLoad} />
+          <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="ap-halo mt-0.5 grid size-10 place-items-center rounded-xl bg-gradient-to-br from-accent/20 to-accent-aurora/20 text-accent">
+                <Activity className="size-5" aria-hidden="true" />
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold tracking-tight sm:text-[1.4rem]">
+                  AtlasPatch Conductor
+                  <span className="font-medium text-muted-foreground"> — Observability</span>
+                </h1>
+                <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                  Read-only view over the PHI-free snapshot — structural verdicts with reason
+                  codes, the decision trace, and no slide pixels.
+                </p>
+                {/* The four-verdict spine hinted as an accent rule — no score/id text. */}
+                <div aria-hidden="true" className="mt-3 flex items-center gap-1.5">
+                  <span className="h-1 w-8 rounded-full bg-verdict-valid" />
+                  <span className="h-1 w-8 rounded-full bg-verdict-skipped" />
+                  <span className="h-1 w-8 rounded-full bg-verdict-quarantined" />
+                  <span className="h-1 w-8 rounded-full bg-verdict-blocked" />
+                </div>
+              </div>
+            </div>
+            <SnapshotLoader onLoad={handleLoad} />
+          </div>
         </header>
 
         {error && (

@@ -13,8 +13,8 @@
 
 ## 3. Header presence
 
-- [ ] 3.1 Add a CSS aurora/gradient wash behind the header and a refined logotype lockup (keep the lucide mark, elevate type/tracking)
-- [ ] 3.2 Hint the verdict palette as an accent without introducing score/raw-id text
+- [x] 3.1 Add a CSS aurora/gradient wash behind the header and a refined logotype lockup (keep the lucide mark, elevate type/tracking)
+- [x] 3.2 Hint the verdict palette as an accent without introducing score/raw-id text
 
 ## 4. Shared panel polish
 
