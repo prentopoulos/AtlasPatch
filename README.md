@@ -581,6 +581,16 @@ with h5py.File("output/patient_features/moozy/case-001.h5", "r") as f:
 cohort: it plans work, dispatches it, validates outputs, retries failures, and logs
 metadata-only telemetry. It never modifies the ML pipeline.
 
+<p align="center">
+  <img src="docs/assets/conductor-architecture.png" alt="AtlasPatch conductor architecture: data foundation, upstream pipeline, agentic conductor core, governance and telemetry layers" width="100%">
+</p>
+<p align="center"><i>Agentic architecture — the conductor wraps the untouched AtlasPatch CLI, with governance and PHI-free telemetry on the seam.</i></p>
+
+<p align="center">
+  <img src="docs/assets/conductor-use-case-flow.png" alt="AtlasPatch conductor use-case flow: plan, dispatch, validate, recover per slide, with a telemetry lane" width="100%">
+</p>
+<p align="center"><i>One run — plan → dispatch → validate → recover, decided per slide, with a bounded per-file recovery loop.</i></p>
+
 ```bash
 pip install "atlas-patch[orchestrator]"
 atlaspatch-conduct run job.yaml --dry-run   # preview the plan; drop --dry-run to run it
